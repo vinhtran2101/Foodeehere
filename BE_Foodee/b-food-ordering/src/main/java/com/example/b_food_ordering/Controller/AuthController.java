@@ -1,0 +1,97 @@
+package com.example.b_food_ordering.Controller;
+
+import com.example.b_food_ordering.Config.JwtUtil;
+import com.example.b_food_ordering.Dto.LoginDTO;
+import com.example.b_food_ordering.Dto.RegisterDTO;
+import com.example.b_food_ordering.Entity.User;
+import com.example.b_food_ordering.Service.UserService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/auth")
+@Validated
+public class AuthController {
+    private final UserService userService;
+    private final JwtUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
+    private final AuthenticationManager authenticationManager;
+
+    public AuthController(UserService userService,
+                          JwtUtil jwtUtil,
+                          UserDetailsService userDetailsService,
+                          AuthenticationManager authenticationManager) {
+        this.userService = userService;
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+        this.authenticationManager = authenticationManager;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterDTO registerDTO) {
+        User user = userService.registerUser(
+                registerDTO.getUsername(),
+                registerDTO.getPassword(),
+                registerDTO.getEmail(),
+                registerDTO.getFullname(),
+                registerDTO.getAddress(),
+                registerDTO.getPhoneNumber(),
+                "USER"
+        );
+        return ResponseEntity.ok("Đăng ký người dùng thành công");
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginDTO loginDTO) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), loginDTO.getPassword())
+            );
+
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            Set<String> roles = userDetails.getAuthorities().stream()
+                    .map(a -> a.getAuthority().replace("ROLE_", ""))
+                    .collect(Collectors.toSet());
+
+            String token = jwtUtil.generateToken(userDetails.getUsername(), roles);
+            Map<String, String> response = new HashMap<>();
+            response.put("token", token);
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            return ResponseEntity.status(401).body("Thông tin đăng nhập không hợp lệ");
+        }
+    }
+
+    // =========================
+    // 🔎 Endpoint chẩn đoán bcrypt
+    // Ví dụ gọi:
+    // GET http://localhost:8080/api/auth/_diag/matches?username=admin&raw=123456
+    // =========================
+    @GetMapping("/_diag/matches")
+    public Map<String, Object> diag(@RequestParam String username,
+                                    @RequestParam String raw,
+                                    org.springframework.security.crypto.password.PasswordEncoder encoder,
+                                    org.springframework.security.core.userdetails.UserDetailsService uds) {
+        UserDetails ud = uds.loadUserByUsername(username);
+        boolean ok = encoder.matches(raw, ud.getPassword());
+        Map<String, Object> r = new HashMap<>();
+        r.put("username", username);
+        r.put("raw", raw);
+        r.put("hash", ud.getPassword());
+        r.put("len", ud.getPassword() == null ? 0 : ud.getPassword().length());
+        r.put("matches", ok);
+        return r;
+    }
+}
