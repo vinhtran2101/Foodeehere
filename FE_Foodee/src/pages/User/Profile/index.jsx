@@ -251,7 +251,7 @@ function Profile() {
                                 )}
                             </div>
 
-                            {/* Quick Actions */}
+                            {/* Quick Actions
                             <div className="mt-8 pt-6 border-t border-gray-100">
                                 <Link
                                     to="/change-password"
@@ -260,7 +260,7 @@ function Profile() {
                                     <Key className="w-5 h-5 mr-2" />
                                     Đổi mật khẩu
                                 </Link>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
 

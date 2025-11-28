@@ -49,6 +49,9 @@ function UserManager() {
                     enabled: user.enabled,
                     roles: user.roles || ['USER'],
                 }));
+            
+                enrichedUsers.sort((a, b) => b.username.localeCompare(a.username));
+
                 setUsers(enrichedUsers);
                 setError(null);
             } catch (err) {

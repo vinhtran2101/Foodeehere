@@ -74,7 +74,7 @@ function Footer() {
                                 { to: '/menu', label: 'Thực đơn' },
                                 { to: '/cart', label: 'Giỏ hàng' },
                                 { to: '/about', label: 'Về chúng tôi' },
-                                { to: '/contact', label: 'Liên hệ' },
+                                // { to: '/contact', label: 'Liên hệ' },
                             ].map((link, index) => (
                                 <motion.li
                                     key={link.to}
@@ -97,9 +97,9 @@ function Footer() {
                         <ul className="space-y-2">
                             {[
                                 { to: '/orders', label: 'Đặt hàng' },
-                                { to: '/delivery', label: 'Giao hàng' },
+                                { to: '/booking', label: 'Đặt bàn' },
                                 { to: '/promotions', label: 'Khuyến mãi' },
-                                { to: '/support', label: 'Hỗ trợ' },
+                                // { to: '/support', label: 'Hỗ trợ' },
                             ].map((link, index) => (
                                 <motion.li
                                     key={link.to}
@@ -117,11 +117,13 @@ function Footer() {
                     {/* Newsletter & Social */}
                     <motion.div custom={3} variants={itemVariants} className="space-y-4">
                         <h5 className="text-lg font-bold text-gray-800 relative after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-1 after:w-12 after:bg-gradient-to-r after:from-orange-500 after:to-amber-600 after:rounded">
-                            Kết nối với chúng tôi
+                            Theo dõi chúng tôi
                         </h5>
                         <div className="mb-4">
-                            <p className="text-gray-600 text-sm mb-2">Đăng ký nhận ưu đãi mới nhất</p>
-                            <div className="flex">
+                            <p className="text-gray-600 text-sm mb-2">Folow để nhận ưu đãi mới nhất</p>
+                            <p className="text-gray-700 text-sm mb-2">Kết nối bất cứ lúc nào qua các kênh</p>
+
+                            {/* <div className="flex">
                                 <input
                                     type="email"
                                     className="flex-grow border border-orange-200 rounded-l-full px-4 py-2 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm transition-all duration-300"
@@ -131,7 +133,7 @@ function Footer() {
                                 <button className="bg-gradient-to-r from-orange-500 to-amber-600 text-white px-4 py-2 rounded-r-full hover:from-orange-600 hover:to-amber-700 shadow-md transition-all duration-300">
                                     <Mail className="w-5 h-5" />
                                 </button>
-                            </div>
+                            </div> */}
                         </div>
                         <div className="flex space-x-3">
                             {[

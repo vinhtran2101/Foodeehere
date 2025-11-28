@@ -344,7 +344,7 @@ function Header() {
                                                     }}
                                                 >
                                                     <Settings className="w-5 h-5 mr-2" />
-                                                    Chỉnh sửa profile
+                                                    Profile
                                                 </Link>
                                                 <Link
                                                     to="/orders/history"
