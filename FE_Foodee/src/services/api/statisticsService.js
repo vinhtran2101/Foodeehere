@@ -191,6 +191,26 @@ export const getDashboardTopFoods = async (token, limit = 5) => {
     }
 };
 
+export const getTopFoods = async (token, limit = 3) => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/top-foods`, {
+            params: { limit },
+            headers: getAuthHeaders(token),
+            timeout: 5000,
+        });
+        return response.data; // [{ productId, name, orders, rating }]
+    } catch (error) {
+        const errorMessage =
+            error.response?.data?.error ||
+            error.response?.data ||
+            error.message ||
+            'Lỗi không xác định';
+        console.error('Lỗi khi lấy top món ăn bán chạy:', errorMessage);
+        throw new Error(errorMessage);
+    }
+};
+
+
 /**
  * 📌 Top người dùng nâng cao cho dashboard
  */

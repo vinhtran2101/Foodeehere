@@ -4,6 +4,7 @@ import com.example.b_food_ordering.Config.JwtUtil;
 import com.example.b_food_ordering.Dto.LoginDTO;
 import com.example.b_food_ordering.Dto.RegisterDTO;
 import com.example.b_food_ordering.Entity.User;
+import com.example.b_food_ordering.Service.PasswordResetService;
 import com.example.b_food_ordering.Service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -28,15 +29,18 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
     private final AuthenticationManager authenticationManager;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(UserService userService,
                           JwtUtil jwtUtil,
                           UserDetailsService userDetailsService,
-                          AuthenticationManager authenticationManager) {
+                          AuthenticationManager authenticationManager,
+                          PasswordResetService passwordResetService) {
         this.userService = userService;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.authenticationManager = authenticationManager;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register")
@@ -94,4 +98,36 @@ public class AuthController {
         r.put("matches", ok);
         return r;
     }
+
+    // ========== QUÊN MẬT KHẨU ==========
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> req) {
+        String email = req.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body("Email không được để trống");
+        }
+
+        passwordResetService.createPasswordResetToken(email);
+        // Luôn trả về thành công, không cho biết email có tồn tại hay không
+        return ResponseEntity.ok("Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.");
+    }
+
+    // ========== ĐẶT LẠI MẬT KHẨU ==========
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> req) {
+        String token = req.get("token");
+        String newPassword = req.get("newPassword");
+
+        if (token == null || token.isBlank() || newPassword == null || newPassword.isBlank()) {
+            return ResponseEntity.badRequest().body("Thiếu token hoặc mật khẩu mới");
+        }
+
+        boolean ok = passwordResetService.resetPassword(token, newPassword);
+        if (ok) {
+            return ResponseEntity.ok("Đặt lại mật khẩu thành công");
+        } else {
+            return ResponseEntity.badRequest().body("Token không hợp lệ hoặc đã hết hạn");
+        }
+    }
+
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaFacebook, FaTwitter, FaGithub, FaEye, FaEyeSlash, FaUser, FaLock } from 'react-icons/fa';
+import { FaFacebook, FaGoogle, FaGithub, FaEye, FaEyeSlash, FaUser, FaLock } from 'react-icons/fa';
 import { login } from '../../services/api/authService';
 import { validateLoginForm } from '../../utils/formValidation';
 
@@ -99,7 +99,7 @@ function Login() {
                         <FaUser className="text-white text-2xl" />
                     </div>
                     <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                        Chào mừng trở lại
+                        Đăng nhập Foodee
                     </h2>
                     <p className="text-gray-600">
                         Chưa có tài khoản?{' '}
@@ -274,18 +274,12 @@ function Login() {
                         <button
                             type="button"
                             className="w-12 h-12 bg-sky-500 text-white rounded-full flex items-center justify-center hover:bg-sky-600 transition-all duration-200 transform hover:scale-110 shadow-lg"
-                            aria-label="Đăng nhập với Twitter"
+                            aria-label="Đăng nhập với Google"
                         >
-                            <FaTwitter size={20} />
+                            <FaGoogle size={20} />
                         </button>
 
-                        <button
-                            type="button"
-                            className="w-12 h-12 bg-gray-800 text-white rounded-full flex items-center justify-center hover:bg-gray-900 transition-all duration-200 transform hover:scale-110 shadow-lg"
-                            aria-label="Đăng nhập với GitHub"
-                        >
-                            <FaGithub size={20} />
-                        </button>
+    
                     </div>
                 </div>
             </div>

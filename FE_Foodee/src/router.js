@@ -22,6 +22,7 @@ import AdminOrderManagement from "./pages/Admin/AdminOrderManagement";
 import AdminOrderDetail from "./pages/Admin/AdminOrderDetail";
 import ForgotPassword from "./pages/ForgotPassword"; 
 import PaymentResultPage from "./pages/User/PaymentResultPage";
+import ResetPassword from "./pages/ResetPassword";
 
 
 // Hàm giải mã JWT để lấy vai trò
@@ -58,6 +59,7 @@ const PublicPage = [
     { path: "/login", component: Login, layout: null },
     { path: "/register", component: Register, layout: null },
     { path: "/forgot-password", component: ForgotPassword, layout: null },
+    { path: "/reset-password", component: ResetPassword, layout: null },
     { path: "/menu", component: Menu, layout: UserLayout },
     { path: "/news", component: News, layout: UserLayout },
     { path: "/booking", component: Booking, layout: UserLayout },

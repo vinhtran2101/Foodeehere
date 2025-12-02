@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaFacebookF, FaTwitter, FaGithub, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaFacebookF, FaGoogle, FaGithub, FaEye, FaEyeSlash, FaUser } from 'react-icons/fa';
 import { register } from '../../../services/api/authService';
 import { validateRegisterForm } from '../../../utils/formValidation';
 
@@ -77,7 +77,7 @@ function Register() {
                 {/* Header */}
                 <div className="text-center mb-8">
                     <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-white text-2xl font-bold">R</span>
+                        <FaUser className="text-white text-2xl" />
                     </div>
                     <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
                         Tạo tài khoản
@@ -258,18 +258,12 @@ function Register() {
                         <button
                             type="button"
                             className="w-12 h-12 bg-sky-500 text-white rounded-full flex items-center justify-center hover:bg-sky-600 transition-all duration-200 transform hover:scale-110 shadow-lg"
-                            aria-label="Đăng ký với Twitter"
+                            aria-label="Đăng ký với Google"
                         >
-                            <FaTwitter size={20} />
+                            <FaGoogle size={20} />
                         </button>
 
-                        <button
-                            type="button"
-                            className="w-12 h-12 bg-gray-800 text-white rounded-full flex items-center justify-center hover:bg-gray-900 transition-all duration-200 transform hover:scale-110 shadow-lg"
-                            aria-label="Đăng ký với GitHub"
-                        >
-                            <FaGithub size={20} />
-                        </button>
+                    
                     </div>
                 </div>
             </div>

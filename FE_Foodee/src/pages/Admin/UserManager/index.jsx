@@ -207,7 +207,7 @@ function UserManager() {
             };
             setUsers([...users, newUser]);
             setAddingUser(false);
-            toast.success(`Thêm người dùng ${response.username} thành công!`, {
+            toast.success(`Thêm nhân viên/admin ${response.username} thành công!`, {
                 position: 'top-right',
                 autoClose: 3000,
                 hideProgressBar: false,
@@ -256,7 +256,7 @@ function UserManager() {
                     className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition-all duration-200"
                     onClick={handleAddUser}
                 >
-                    <FaUserPlus className="mr-2" /> Thêm Người Dùng
+                    <FaUserPlus className="mr-2" /> Thêm nhân viên/admin
                 </button>
             </div>
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -384,7 +384,7 @@ function UserManager() {
             {addingUser && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl p-8 w-full max-w-4xl shadow-2xl backdrop-blur-lg">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-6">Thêm Người Dùng</h3>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-6">Thêm nhân viên/admin</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Tên Đăng Nhập *</label>

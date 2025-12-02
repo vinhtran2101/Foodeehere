@@ -17,12 +17,12 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      // TODO: khi BE có API thì đổi URL này
-      // await axios.post("http://localhost:8080/api/auth/forgot-password", { email });
+      await axios.post("http://localhost:8080/api/auth/forgot-password", { email });
 
       setStatus({
         type: "success",
-        message: "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu.",
+        message:
+          "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra email.",
       });
     } catch (err) {
       setStatus({
@@ -33,6 +33,7 @@ const ForgotPassword = () => {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 px-4 py-8">

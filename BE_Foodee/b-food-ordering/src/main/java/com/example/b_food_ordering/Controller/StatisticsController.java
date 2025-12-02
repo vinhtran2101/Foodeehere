@@ -2,6 +2,7 @@ package com.example.b_food_ordering.Controller;
 
 import com.example.b_food_ordering.Dto.DashboardOverviewDTO;
 import com.example.b_food_ordering.Dto.OrderItemDTO;
+import com.example.b_food_ordering.Dto.TopFoodDTO;
 import com.example.b_food_ordering.Entity.Category;
 import com.example.b_food_ordering.Entity.ProductType;
 import com.example.b_food_ordering.Service.StatisticsService;
@@ -46,6 +47,14 @@ public class StatisticsController {
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(statisticsService.getRecentActivities(limit));
     }
+
+    @GetMapping("/top-foods")
+    public ResponseEntity<List<TopFoodDTO>> getTopFoods(
+            @RequestParam(defaultValue = "3") int limit
+    ) {
+        return ResponseEntity.ok(statisticsService.getTopFoods(limit));
+    }
+
 
     @GetMapping("/top-users")
     public ResponseEntity<List<Map<String, Object>>> getTopUsers(

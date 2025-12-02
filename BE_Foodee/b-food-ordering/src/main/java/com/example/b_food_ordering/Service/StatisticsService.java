@@ -3,6 +3,7 @@ package com.example.b_food_ordering.Service;
 import com.example.b_food_ordering.Dto.OrderDTO;
 import com.example.b_food_ordering.Dto.OrderItemDTO;
 import com.example.b_food_ordering.Dto.DashboardOverviewDTO;
+import com.example.b_food_ordering.Dto.TopFoodDTO;
 import com.example.b_food_ordering.Entity.*;
 import com.example.b_food_ordering.Repository.*;
 import com.example.b_food_ordering.Repository.ProductRepository;
@@ -27,6 +28,8 @@ public class StatisticsService {
     private final UserRepository userRepository;
     private final ProductTypeRepository productTypeRepository;
     private final ProductRepository productRepository;
+    private final OrderItemRepository orderItemRepository;
+
 
 
     @Autowired
@@ -35,7 +38,7 @@ public class StatisticsService {
                              BookingRepository bookingRepository,
                              UserRepository userRepository,
                              ProductTypeRepository productTypeRepository,
-                             ProductRepository productRepository ){
+                             ProductRepository productRepository, OrderItemRepository orderItemRepository){
 
         this.categoryRepository = categoryRepository;
         this.orderRepository = orderRepository;
@@ -43,6 +46,7 @@ public class StatisticsService {
         this.userRepository = userRepository;
         this.productTypeRepository = productTypeRepository;
         this.productRepository = productRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     public List<Category> getAllCategories() {
@@ -319,5 +323,20 @@ public class StatisticsService {
     public List<Map<String, Object>> getDashboardTopUsers(int limit) {
         return getTopUsers(limit);
     }
+
+    public List<TopFoodDTO> getTopFoods(int limit) {
+        List<TopFoodDTO> list = orderItemRepository.findTopFoods(
+                Order.PaymentStatus.PAID,
+                Order.OrderStatus.DELIVERED
+        );
+
+        // Giới hạn số lượng trả về
+        if (limit > 0 && list.size() > limit) {
+            return list.subList(0, limit);
+        }
+
+        return list;
+    }
+
 
 }

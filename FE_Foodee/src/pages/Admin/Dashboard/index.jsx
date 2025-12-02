@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell
 import { Calendar, ChevronDown, X, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, updateAdminProfile } from '../../../services/api/userService';
-import { getAllProductTypes, getRecentActivities, getDashboardOverview } from '../../../services/api/statisticsService';
+import { getAllProductTypes, getRecentActivities, getDashboardOverview, getTopFoods } from '../../../services/api/statisticsService';
 import { getProductTypeStats } from '../../../services/api/statisticsService';
 
 // Toast Notification Component
@@ -56,6 +56,8 @@ function AdminDashboard() {
     const [activityLoading, setActivityLoading] = useState(false);
     const [stats, setStats] = useState([]);
     const [dashboardLoading, setDashboardLoading] = useState(false);
+    const [topFoods, setTopFoods] = useState([]);
+    const [topFoodsLoading, setTopFoodsLoading] = useState(false);    
     const token = localStorage.getItem('token');
 
     // Màu sắc cho biểu đồ tròn
@@ -200,11 +202,28 @@ useEffect(() => {
         }
     };
 
+    const fetchTopFoodsData = async () => {
+        setTopFoodsLoading(true);
+        try {
+            const data = await getTopFoods(token, 3);
+            setTopFoods(data);
+        } catch (error) {
+            console.error('Lỗi khi tải top món ăn bán chạy:', error);
+            setToast({
+                message: 'Lỗi khi tải top món ăn bán chạy.',
+                type: 'error',
+            });
+        } finally {
+            setTopFoodsLoading(false);
+        }
+    };
+
     // Gọi tất cả API
     fetchProfile();
     fetchProductTypes();
     fetchActivities();
     fetchDashboardStats(); // 👈 quan trọng
+    fetchTopFoodsData();   
 
 }, [navigate, token]);
 
@@ -233,11 +252,7 @@ useEffect(() => {
         { name: 'T12', revenue: 280, target: 270 }
     ];
 
-    const topFoods = [
-        { name: 'Pizza Hải Sản', orders: 72, rating: 4.8 },
-        { name: 'Phở Bò', orders: 65, rating: 4.9 },
-        { name: 'Hamburger Gà', orders: 50, rating: 4.6 },
-    ];
+
 
     const notableAccounts = [
         {
@@ -524,30 +539,55 @@ useEffect(() => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {topFoods.map((food, idx) => (
-                                            <tr key={food.name} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center">
-                                                        <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-red-500 rounded-lg flex items-center justify-center text-white mr-3">
-                                                            <FaHamburger />
-                                                        </div>
-                                                        <span className="font-semibold text-gray-800">{food.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                                                        {food.orders}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center">
-                                                        <FaStar className="text-yellow-400 mr-1" />
-                                                        <span className="font-semibold text-gray-800">{food.rating}</span>
+                                        {topFoodsLoading ? (
+                                            <tr>
+                                                <td colSpan={3} className="px-6 py-6 text-center">
+                                                    <div className="flex items-center justify-center gap-2 text-gray-500">
+                                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                                        <span>Đang tải dữ liệu...</span>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : topFoods.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={3} className="px-6 py-6 text-center text-gray-500">
+                                                    Chưa có dữ liệu top món ăn.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            topFoods.map((food, idx) => (
+                                                <tr
+                                                    key={food.productId || food.name || idx}
+                                                    className="hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center">
+                                                            <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-red-500 rounded-lg flex items-center justify-center text-white mr-3">
+                                                                <FaHamburger />
+                                                            </div>
+                                                            <span className="font-semibold text-gray-800">
+                                                                {food.name}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                                                            {food.orders}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center">
+                                                            <FaStar className="text-yellow-400 mr-1" />
+                                                            <span className="font-semibold text-gray-800">
+                                                                {food.rating != null ? food.rating.toFixed(1) : '0.0'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
+
                                 </table>
                             </div>
                         </div>

@@ -36,7 +36,7 @@ const OrderPage = () => {
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
-                    setError('Không tìm thấy token');
+                    setError('Đăng nhập để đặt đồ ăn');
                     return;
                 }
 
