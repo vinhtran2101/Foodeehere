@@ -210,6 +210,30 @@ export const getTopFoods = async (token, limit = 3) => {
     }
 };
 
+export const getOrderStatusSummary = async (token, from, to) => {
+    try {
+        const params = {};
+        if (from) params.from = from;
+        if (to) params.to = to;
+
+        const response = await axios.get(`${API_BASE_URL}/order-status-summary`, {
+            params,
+            headers: getAuthHeaders(token),
+            timeout: 5000,
+        });
+
+        return response.data; // [{ status: 'PENDING', count: 2 }, ...]
+    } catch (error) {
+        const errorMessage =
+            error.response?.data?.error ||
+            error.response?.data ||
+            error.message ||
+            'Lỗi không xác định';
+        console.error('Lỗi khi lấy thống kê trạng thái đơn hàng:', errorMessage);
+        throw new Error(errorMessage);
+    }
+};
+
 
 /**
  * 📌 Top người dùng nâng cao cho dashboard

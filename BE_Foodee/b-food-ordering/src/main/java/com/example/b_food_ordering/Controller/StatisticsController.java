@@ -10,6 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.example.b_food_ordering.Dto.OrderStatusSummaryDTO;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
+
 
 import java.util.List;
 import java.util.Map;
@@ -116,4 +120,20 @@ public class StatisticsController {
             @RequestParam(defaultValue = "5") int limit) {
         return ResponseEntity.ok(statisticsService.getDashboardTopUsers(limit));
     }
+
+    /**
+     * 📌 API: Thống kê số đơn theo trạng thái trong khoảng ngày [from, to].
+     * - Nếu không truyền from/to -> mặc định hôm nay.
+     * - from, to định dạng: yyyy-MM-dd (VD: 2025-12-02)
+     */
+    @GetMapping("/order-status-summary")
+    public ResponseEntity<List<OrderStatusSummaryDTO>> getOrderStatusSummary(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
+        return ResponseEntity.ok(statisticsService.getOrderStatusSummary(from, to));
+    }
+
 }

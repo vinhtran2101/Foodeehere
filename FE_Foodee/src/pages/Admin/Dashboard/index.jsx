@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell
 import { Calendar, ChevronDown, X, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, updateAdminProfile } from '../../../services/api/userService';
-import { getAllProductTypes, getRecentActivities, getDashboardOverview, getTopFoods } from '../../../services/api/statisticsService';
+import { getAllProductTypes, getRecentActivities, getDashboardOverview, getTopFoods, getOrderStatusSummary} from '../../../services/api/statisticsService';
 import { getProductTypeStats } from '../../../services/api/statisticsService';
 
 // Toast Notification Component
@@ -44,8 +44,10 @@ function AdminDashboard() {
     const [showProfileModal, setShowProfileModal] = useState(false);
     const [profileForm, setProfileForm] = useState(admin);
     const [selectedTab, setSelectedTab] = useState('Tổng quan');
-    const [startDate, setStartDate] = useState('2025-07-24');
-    const [endDate, setEndDate] = useState('2025-07-30');
+    const todayStr = new Date().toISOString().slice(0, 10); // "yyyy-MM-dd"
+
+    const [startDate, setStartDate] = useState(todayStr);
+    const [endDate, setEndDate] = useState(todayStr);
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [loading, setLoading] = useState(false);
     const [updateLoading, setUpdateLoading] = useState(false);
@@ -58,7 +60,75 @@ function AdminDashboard() {
     const [dashboardLoading, setDashboardLoading] = useState(false);
     const [topFoods, setTopFoods] = useState([]);
     const [topFoodsLoading, setTopFoodsLoading] = useState(false);    
+    const [orderStatusSummary, setOrderStatusSummary] = useState([]);
+    const [orderStatusLoading, setOrderStatusLoading] = useState(false);
+
     const token = localStorage.getItem('token');
+    
+    const orderStatusConfig = {
+        PENDING: { 
+            label: 'Chờ xác nhận', 
+            bg: 'bg-yellow-50', 
+            text: 'text-yellow-700', 
+            dot: 'bg-yellow-400' 
+        },
+        CONFIRMED: { 
+            label: 'Đã xác nhận', 
+            bg: 'bg-blue-50', 
+            text: 'text-blue-700', 
+            dot: 'bg-blue-400' 
+        },
+        SHIPPING: { 
+            label: 'Đang giao', 
+            bg: 'bg-purple-50', 
+            text: 'text-purple-700', 
+            dot: 'bg-purple-400' 
+        },
+        DELIVERED: { 
+            label: 'Đã giao', 
+            bg: 'bg-emerald-50', 
+            text: 'text-emerald-700', 
+            dot: 'bg-emerald-400' 
+        },
+        CANCEL_REQUESTED: { 
+            label: 'Yêu cầu hủy', 
+            bg: 'bg-orange-50', 
+            text: 'text-orange-700', 
+            dot: 'bg-orange-400' 
+        },
+        CANCELLED: { 
+            label: 'Đã hủy', 
+            bg: 'bg-red-50', 
+            text: 'text-red-700', 
+            dot: 'bg-red-400' 
+        }
+    };
+
+    const handleFilterOrderStatus = async () => {
+        if (!startDate || !endDate) {
+            setToast({
+                message: 'Vui lòng chọn đủ ngày bắt đầu và kết thúc.',
+                type: 'error',
+            });
+            return;
+        }
+
+        setOrderStatusLoading(true);
+        try {
+            const data = await getOrderStatusSummary(token, startDate, endDate);
+            setOrderStatusSummary(data);
+        } catch (error) {
+            console.error('Lỗi khi lọc trạng thái đơn hàng:', error);
+            setToast({
+                message: 'Lỗi khi lọc trạng thái đơn hàng.',
+                type: 'error',
+            });
+        } finally {
+            setOrderStatusLoading(false);
+        }
+    };
+
+
 
     // Màu sắc cho biểu đồ tròn
     const COLORS = ['#3b82f6', '#22c55e', '#facc15', '#ef4444', '#a855f7'];
@@ -218,12 +288,35 @@ useEffect(() => {
         }
     };
 
+    const fetchOrderStatusSummaryData = async () => {
+        setOrderStatusLoading(true);
+        try {
+            const data = await getOrderStatusSummary(token, startDate, endDate);
+            setOrderStatusSummary(data);
+        } catch (error) {
+            console.error('Lỗi khi tải thống kê trạng thái đơn hàng:', error);
+            setToast({
+                message: 'Lỗi khi tải thống kê trạng thái đơn hàng.',
+                type: 'error',
+            });
+        } finally {
+            setOrderStatusLoading(false);
+        }
+    };
+
+
+
     // Gọi tất cả API
     fetchProfile();
     fetchProductTypes();
     fetchActivities();
     fetchDashboardStats(); // 👈 quan trọng
-    fetchTopFoodsData();   
+    fetchTopFoodsData(); 
+    fetchOrderStatusSummaryData();
+    const interval = setInterval(fetchOrderStatusSummaryData, 900000);
+    return () => clearInterval(interval);
+    
+      
 
 }, [navigate, token]);
 
@@ -694,31 +787,97 @@ useEffect(() => {
                             )}
                         </div>
 
-                        {/* Hoạt động gần đây */}
-                        <div className="bg-white rounded-2xl shadow-lg p-6 border border-white/20">
-                            <h3 className="text-xl font-bold text-gray-800 mb-6">Hoạt động gần đây</h3>
-                            {activityLoading ? (
-                                <div className="flex justify-center items-center h-48">
-                                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                        {/* Trạng thái đơn hàng  */}
+                        <div className="bg-white rounded-2xl shadow-lg border border-white/20 overflow-hidden">
+                            <div className="p-6 border-b border-gray-100">
+                                <div className="flex flex-col gap-3">
+                                    {/* Tiêu đề + mô tả */}
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-800">
+                                            Trạng thái đơn hàng
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Thống kê số đơn theo trạng thái
+                                        </p>
+                                    </div>
+
+                                    {/* Bộ lọc ngày */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <span className="text-gray-400">-</span>
+                                        <input
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <button
+                                            onClick={handleFilterOrderStatus}
+                                            className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition-colors"
+                                        >
+                                            Lọc
+                                        </button>
+                                    </div>
                                 </div>
-                            ) : activities.length > 0 ? (
-                                <div className="space-y-4">
-                                    {activities.map((activity, index) => (
-                                        <div key={index} className="flex items-start gap-3">
-                                            <div className={`${activity.color} text-white text-xs font-medium px-2 py-1 rounded-lg min-w-16 text-center`}>
-                                                {activity.type}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm text-gray-800">{activity.text}</p>
-                                                <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-center text-gray-600">Không có hoạt động nào.</p>
-                            )}
+                            </div>
+
+
+
+
+                            <div className="p-6">
+                                {orderStatusLoading ? (
+                                    <div className="flex items-center justify-center gap-2 text-gray-500 py-6">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span>Đang tải dữ liệu...</span>
+                                    </div>
+                                ) : orderStatusSummary.length === 0 ? (
+                                    <div className="text-center text-gray-500 py-6">
+                                        Chưa có đơn hàng nào trong ngày hôm nay.
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {orderStatusSummary.map((item) => {
+                                            const config =
+                                                orderStatusConfig[item.status] || {
+                                                    label: item.status,
+                                                    bg: 'bg-gray-50',
+                                                    text: 'text-gray-700',
+                                                    dot: 'bg-gray-400',
+                                                };
+
+                                            return (
+                                                <div
+                                                    key={item.status}
+                                                    className={`flex items-center justify-between p-3 rounded-xl ${config.bg}`}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span
+                                                            className={`w-2 h-2 rounded-full ${config.dot}`}
+                                                        ></span>
+                                                        <span
+                                                            className={`text-sm font-medium ${config.text}`}
+                                                        >
+                                                            {config.label}
+                                                        </span>
+                                                    </div>
+                                                    <span
+                                                        className={`text-lg font-bold tracking-tight ${config.text}`}
+                                                    >
+                                                        {item.count}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         </div>
+
 
                         
                     </div>

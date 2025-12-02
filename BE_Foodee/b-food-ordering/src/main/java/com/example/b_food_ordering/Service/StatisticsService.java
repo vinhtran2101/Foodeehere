@@ -12,6 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.example.b_food_ordering.Dto.OrderStatusSummaryDTO;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 
 
 import java.util.*;
@@ -337,6 +341,50 @@ public class StatisticsService {
 
         return list;
     }
+
+    /**
+     * 📊 Thống kê số đơn theo trạng thái trong khoảng ngày [from, to].
+     * Nếu from/to null -> mặc định là hôm nay.
+     */
+    @Transactional
+    public List<OrderStatusSummaryDTO> getOrderStatusSummary(LocalDate from, LocalDate to) {
+        // Nếu không truyền -> mặc định hôm nay
+        if (from == null && to == null) {
+            from = LocalDate.now();
+            to = LocalDate.now();
+        } else if (from == null) {
+            from = to;
+        } else if (to == null) {
+            to = from;
+        }
+
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime end = to.plusDays(1).atStartOfDay(); // < to+1d  => trọn ngày
+
+        List<Object[]> raw = orderRepository.countOrdersByStatusInRange(start, end);
+
+        // Khởi tạo tất cả trạng thái = 0
+        Map<Order.OrderStatus, Long> counts = new EnumMap<>(Order.OrderStatus.class);
+        for (Order.OrderStatus status : Order.OrderStatus.values()) {
+            counts.put(status, 0L);
+        }
+
+        // Ghi đè những trạng thái có dữ liệu
+        for (Object[] row : raw) {
+            Order.OrderStatus status = (Order.OrderStatus) row[0];
+            Long count = (Long) row[1];
+            counts.put(status, count);
+        }
+
+        // Chuyển thành list DTO, luôn đủ tất cả trạng thái
+        List<OrderStatusSummaryDTO> result = new ArrayList<>();
+        for (Order.OrderStatus status : Order.OrderStatus.values()) {
+            result.add(new OrderStatusSummaryDTO(status.name(), counts.get(status)));
+        }
+
+        return result;
+    }
+
 
 
 }
