@@ -33,6 +33,7 @@ public class StatisticsService {
     private final ProductTypeRepository productTypeRepository;
     private final ProductRepository productRepository;
     private final OrderItemRepository orderItemRepository;
+    private final ReviewRepository reviewRepository;
 
 
 
@@ -42,7 +43,7 @@ public class StatisticsService {
                              BookingRepository bookingRepository,
                              UserRepository userRepository,
                              ProductTypeRepository productTypeRepository,
-                             ProductRepository productRepository, OrderItemRepository orderItemRepository){
+                             ProductRepository productRepository, OrderItemRepository orderItemRepository, ReviewRepository reviewRepository){
 
         this.categoryRepository = categoryRepository;
         this.orderRepository = orderRepository;
@@ -51,6 +52,7 @@ public class StatisticsService {
         this.productTypeRepository = productTypeRepository;
         this.productRepository = productRepository;
         this.orderItemRepository = orderItemRepository;
+        this.reviewRepository = reviewRepository;
     }
 
     public List<Category> getAllCategories() {
@@ -68,6 +70,12 @@ public class StatisticsService {
         Map<Long, OrderItemDTO> productDetailsMap = new HashMap<>();
 
         for (Order order : orders) {
+
+            // ⭐ CHỈ đếm những đơn đã giao thành công
+            if (order.getOrderStatus() != Order.OrderStatus.DELIVERED) {
+                continue;
+            }
+
             for (OrderItem item : order.getOrderItems()) {
                 if (item.getProduct() == null) {
                     logger.warn("OrderItem ID {} has null product", item.getId());
@@ -86,7 +94,7 @@ public class StatisticsService {
                     itemDTO.setProductImage(item.getProduct().getImg());
                     itemDTO.setUnitPrice(item.getUnitPrice());
                     itemDTO.setSubtotal(item.getSubtotal());
-                    
+
                     productDetailsMap.put(productId, itemDTO);
                 }
             }
@@ -98,12 +106,13 @@ public class StatisticsService {
                 .map(entry -> {
                     OrderItemDTO dto = productDetailsMap.get(entry.getKey());
                     if (dto != null) {
-                        dto.setTotalOrdered(entry.getValue()); // ← GÁN lượt đặt
+                        dto.setTotalOrdered(entry.getValue()); // lượt đặt = số lượng trong các đơn đã giao
                     }
                     return dto;
                 })
                 .collect(Collectors.toList());
     }
+
 
     @Transactional
     public List<String> getRecentActivities(int limit) {
@@ -307,17 +316,44 @@ public class StatisticsService {
 
         for (OrderItemDTO item : topItems) {
             if (item == null) continue;
+
             Map<String, Object> map = new HashMap<>();
             map.put("productId", item.getProductId());
             map.put("productName", item.getProductName());
             map.put("productImage", item.getProductImage());
             map.put("totalOrdered", item.getTotalOrdered());
             map.put("unitPrice", item.getUnitPrice());
+
+            // ⭐ Tính điểm trung bình + số lượt đánh giá cho sản phẩm này
+            double averageRating = 0.0;
+            int ratingCount = 0;
+
+            if (item.getProductId() != null) {
+                Product product = productRepository
+                        .findById(item.getProductId())
+                        .orElse(null);
+
+                if (product != null) {
+                    List<Review> reviews = reviewRepository.findByProduct(product);
+                    ratingCount = reviews.size();
+                    if (ratingCount > 0) {
+                        averageRating = reviews.stream()
+                                .mapToInt(Review::getRating)
+                                .average()
+                                .orElse(0.0);
+                    }
+                }
+            }
+
+            map.put("averageRating", averageRating);   // ví dụ 4.2
+            map.put("ratingCount", ratingCount);       // ví dụ 15
+
             result.add(map);
         }
 
         return result;
     }
+
 
     /**
      * Top user cho dashboard.

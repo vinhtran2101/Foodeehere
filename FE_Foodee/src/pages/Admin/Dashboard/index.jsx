@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell
 import { Calendar, ChevronDown, X, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, updateAdminProfile } from '../../../services/api/userService';
-import { getAllProductTypes, getRecentActivities, getDashboardOverview, getTopFoods, getOrderStatusSummary} from '../../../services/api/statisticsService';
+import { getAllProductTypes, getRecentActivities, getDashboardOverview, getTopFoods, getOrderStatusSummary,  getDashboardTopFoods } from '../../../services/api/statisticsService';
 import { getProductTypeStats } from '../../../services/api/statisticsService';
 
 // Toast Notification Component
@@ -272,21 +272,34 @@ useEffect(() => {
         }
     };
 
-    const fetchTopFoodsData = async () => {
-        setTopFoodsLoading(true);
+    const fetchTopFoods = async () => {
         try {
-            const data = await getTopFoods(token, 3);
-            setTopFoods(data);
+            setTopFoodsLoading(true);
+            const token = localStorage.getItem('token');
+
+            // Gọi API lấy top món ăn, lấy 3 món đầu
+            const data = await getDashboardTopFoods(token, 3);
+
+            // Map dữ liệu từ API về đúng format UI cần
+            const mapped = data.map((item) => ({
+                id: item.productId,
+                name: item.productName,
+                image: item.productImage,
+                orders: item.totalOrdered,
+                // ⭐ điểm trung bình từ backend, làm tròn 1 chữ số
+                rating: Number(item.averageRating || 0).toFixed(1),
+                // ⭐ số lượt đánh giá
+                ratingCount: item.ratingCount || 0,
+            }));
+
+            setTopFoods(mapped);
         } catch (error) {
-            console.error('Lỗi khi tải top món ăn bán chạy:', error);
-            setToast({
-                message: 'Lỗi khi tải top món ăn bán chạy.',
-                type: 'error',
-            });
+            console.error('Lỗi khi lấy top món ăn:', error);
         } finally {
             setTopFoodsLoading(false);
         }
     };
+
 
     const fetchOrderStatusSummaryData = async () => {
         setOrderStatusLoading(true);
@@ -311,7 +324,7 @@ useEffect(() => {
     fetchProductTypes();
     fetchActivities();
     fetchDashboardStats(); // 👈 quan trọng
-    fetchTopFoodsData(); 
+    fetchTopFoods(); 
     fetchOrderStatusSummaryData();
     const interval = setInterval(fetchOrderStatusSummaryData, 900000);
     return () => clearInterval(interval);
@@ -669,13 +682,17 @@ useEffect(() => {
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <div className="flex items-center">
+                                                        <div className="flex items-center text-sm">
                                                             <FaStar className="text-yellow-400 mr-1" />
                                                             <span className="font-semibold text-gray-800">
-                                                                {food.rating != null ? food.rating.toFixed(1) : '0.0'}
+                                                                {food.rating}
+                                                            </span>
+                                                            <span className="text-gray-400 text-xs ml-2">
+                                                                ({food.ratingCount} lượt)
                                                             </span>
                                                         </div>
                                                     </td>
+
                                                 </tr>
                                             ))
                                         )}

@@ -28,6 +28,8 @@ public class OrderItemDTO {
     
     private int totalOrdered;
 
+    private Integer userRating;
+    private String userComment;
 
 	public int getTotalOrdered() {
 		return totalOrdered;

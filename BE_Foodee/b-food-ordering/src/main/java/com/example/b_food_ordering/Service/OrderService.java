@@ -3,6 +3,7 @@ package com.example.b_food_ordering.Service;
 import com.example.b_food_ordering.Dto.OrderDTO;
 import com.example.b_food_ordering.Dto.OrderItemDTO;
 import com.example.b_food_ordering.Entity.*;
+import com.example.b_food_ordering.Repository.ReviewRepository;
 import com.example.b_food_ordering.Repository.OrderRepository;
 import com.example.b_food_ordering.Repository.PaymentRepository;
 import com.example.b_food_ordering.Repository.ProductRepository;
@@ -23,16 +24,18 @@ public class OrderService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final PaymentRepository paymentRepository;
+    private final ReviewRepository reviewRepository;
     private final CartService cartService;
 
     @Autowired
     public OrderService(OrderRepository orderRepository, UserRepository userRepository,
-                        ProductRepository productRepository, PaymentRepository paymentRepository,
+                        ProductRepository productRepository, PaymentRepository paymentRepository, ReviewRepository reviewRepository,
                         CartService cartService) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.paymentRepository = paymentRepository;
+        this.reviewRepository = reviewRepository;
         this.cartService = cartService;
     }
 
@@ -320,6 +323,17 @@ public class OrderService {
         orderItemDTO.setProductImage(orderItem.getProduct().getImg());
         orderItemDTO.setUnitPrice(orderItem.getUnitPrice());
         orderItemDTO.setSubtotal(orderItem.getSubtotal());
+
+        reviewRepository
+                .findByUserAndOrderAndProduct(
+                        orderItem.getOrder().getUser(),
+                        orderItem.getOrder(),
+                        orderItem.getProduct()
+                )
+                .ifPresent(review -> {
+                    orderItemDTO.setUserRating(review.getRating());
+                    orderItemDTO.setUserComment(review.getComment());
+                });
         return orderItemDTO;
     }
 }

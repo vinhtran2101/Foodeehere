@@ -342,14 +342,25 @@ const OrderHistoryPage = () => {
                                                                 <p className="text-slate-500 text-xs">
                                                                     Tổng: {(item.subtotal || item.unitPrice * item.quantity || 0).toLocaleString('vi-VN')} ₫
                                                                 </p>
-                                                                {order.orderStatus === 'DELIVERED' && (
+
+                                                                {/* ⭐ Nếu user đã đánh giá, hiển thị sao */}
+                                                                {item.userRating && (
+                                                                    <div className="mt-1 text-xs text-amber-500 font-semibold flex items-center gap-1">
+                                                                        {Array.from({ length: 5 }).map((_, i) => (
+                                                                            <span key={i}>{i < item.userRating ? '★' : '☆'}</span>
+                                                                        ))}
+                                                                        <span className="text-slate-500 ml-1">(Bạn đã đánh giá)</span>
+                                                                    </div>
+                                                                )}
+                                                                {order.orderStatus === 'DELIVERED' && !item.userRating && (
                                                                     <button
                                                                         onClick={() => openReviewModal(order, item)}
-                                                                        className="mt-2 px-3 py-1 bg-yellow-500 text-white rounded-lg text-xs"
+                                                                        className="mt-2 px-3 py-1 bg-yellow-500 text-white rounded-lg text-xs hover:bg-yellow-600 transition"
                                                                     >
-                                                                        Đánh giá món này
+                                                                        ⭐ Đánh giá món này
                                                                     </button>
                                                                 )}
+
 
                                                             </div>
                                                         </div>
