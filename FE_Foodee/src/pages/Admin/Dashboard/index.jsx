@@ -60,6 +60,8 @@ function AdminDashboard() {
     const [dashboardLoading, setDashboardLoading] = useState(false);
     const [topFoods, setTopFoods] = useState([]);
     const [topFoodsLoading, setTopFoodsLoading] = useState(false);    
+    const [topFoodsRaw, setTopFoodsRaw] = useState([]);      // dữ liệu gốc từ API
+    const [topFoodSort, setTopFoodSort] = useState('MOST_SOLD'); // kiểu sắp xếp hiện tại
     const [orderStatusSummary, setOrderStatusSummary] = useState([]);
     const [orderStatusLoading, setOrderStatusLoading] = useState(false);
 
@@ -128,18 +130,59 @@ function AdminDashboard() {
         }
     };
 
+    // Hàm áp dụng sắp xếp cho danh sách món ăn
+    const applyTopFoodSort = (data, sort) => {
+        const sorted = [...data];
+
+        switch (sort) {
+            case 'LEAST_SOLD':
+                // Bán ít nhất → ít đơn nhất lên đầu
+                sorted.sort((a, b) => a.orders - b.orders);
+                break;
+
+            case 'HIGHEST_RATING':
+                // Đánh giá cao nhất → điểm cao hơn lên đầu, nếu bằng nhau thì nhiều lượt đánh giá hơn lên trước
+                sorted.sort((a, b) => {
+                    const ra = parseFloat(a.rating) || 0;
+                    const rb = parseFloat(b.rating) || 0;
+                    if (rb !== ra) return rb - ra;
+                    return (b.ratingCount || 0) - (a.ratingCount || 0);
+                });
+                break;
+
+            case 'LOWEST_RATING':
+                // Đánh giá thấp nhất → điểm thấp hơn lên đầu, ưu tiên món đã có lượt đánh giá
+                sorted.sort((a, b) => {
+                    const ra = parseFloat(a.rating) || 0;
+                    const rb = parseFloat(b.rating) || 0;
+                    if (ra !== rb) return ra - rb;
+                    return (b.ratingCount || 0) - (a.ratingCount || 0);
+                });
+                break;
+
+            case 'MOST_SOLD':
+            default:
+                // Bán chạy nhất (mặc định) → nhiều đơn nhất lên đầu
+                sorted.sort((a, b) => b.orders - a.orders);
+                break;
+        }
+
+        return sorted;
+    };
+
+
 
 
     // Màu sắc cho biểu đồ tròn
     const COLORS = ['#3b82f6', '#22c55e', '#facc15', '#ef4444', '#a855f7'];
 
     // Load thông tin admin và dữ liệu từ API khi component mount
-useEffect(() => {
-    if (!token) {
-        setToast({ message: 'Vui lòng đăng nhập để xem thông tin admin.', type: 'error' });
-        navigate('/login');
-        return;
-    }
+    useEffect(() => {
+        if (!token) {
+            setToast({ message: 'Vui lòng đăng nhập để xem thông tin admin.', type: 'error' });
+            navigate('/login');
+            return;
+        }
 
     // Load thông tin admin
     const fetchProfile = async () => {
@@ -277,28 +320,27 @@ useEffect(() => {
             setTopFoodsLoading(true);
             const token = localStorage.getItem('token');
 
-            // Gọi API lấy top món ăn, lấy 3 món đầu
-            const data = await getDashboardTopFoods(token, 3);
+            // Lấy khoảng 5 món cho hiển thị Top 5
+            const data = await getDashboardTopFoods(token, 5);
 
-            // Map dữ liệu từ API về đúng format UI cần
             const mapped = data.map((item) => ({
                 id: item.productId,
                 name: item.productName,
                 image: item.productImage,
                 orders: item.totalOrdered,
-                // ⭐ điểm trung bình từ backend, làm tròn 1 chữ số
                 rating: Number(item.averageRating || 0).toFixed(1),
-                // ⭐ số lượt đánh giá
                 ratingCount: item.ratingCount || 0,
             }));
 
-            setTopFoods(mapped);
+            setTopFoodsRaw(mapped); // lưu dữ liệu gốc
+            setTopFoods(applyTopFoodSort(mapped, topFoodSort)); // sắp xếp theo kiểu hiện tại
         } catch (error) {
             console.error('Lỗi khi lấy top món ăn:', error);
         } finally {
             setTopFoodsLoading(false);
         }
     };
+
 
 
     const fetchOrderStatusSummaryData = async () => {
@@ -316,6 +358,7 @@ useEffect(() => {
             setOrderStatusLoading(false);
         }
     };
+    
 
 
 
@@ -479,6 +522,12 @@ useEffect(() => {
         }
     };
 
+    useEffect(() => {
+        // Mỗi lần dữ liệu gốc hoặc kiểu sort đổi → sort lại
+        if (!topFoodsRaw || topFoodsRaw.length === 0) return;
+        setTopFoods(applyTopFoodSort(topFoodsRaw, topFoodSort));
+    }, [topFoodsRaw, topFoodSort]);
+
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
@@ -633,7 +682,24 @@ useEffect(() => {
                         {/* Top món ăn */}
                         <div className="bg-white rounded-2xl shadow-lg border border-white/20 overflow-hidden">
                             <div className="p-6 border-b border-gray-100">
-                                <h3 className="text-xl font-bold text-gray-800">Top món ăn bán chạy</h3>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-xl font-bold text-gray-800">Thống kê tình trạng các món ăn</h3>
+
+                                    {/* ⭐ Bộ lọc sắp xếp */}
+                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                        <span className="hidden sm:inline">Sắp xếp:</span>
+                                        <select
+                                            value={topFoodSort}
+                                            onChange={(e) => setTopFoodSort(e.target.value)}
+                                            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="MOST_SOLD">Bán chạy nhất</option>
+                                            <option value="LEAST_SOLD">Ít bán nhất</option>
+                                            <option value="HIGHEST_RATING">Đánh giá cao nhất</option>
+                                            <option value="LOWEST_RATING">Đánh giá thấp nhất</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
