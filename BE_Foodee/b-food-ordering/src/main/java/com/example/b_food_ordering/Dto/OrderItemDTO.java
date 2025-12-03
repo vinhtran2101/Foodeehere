@@ -28,6 +28,7 @@ public class OrderItemDTO {
     
     private int totalOrdered;
 
+
 	public int getTotalOrdered() {
 		return totalOrdered;
 	}

@@ -220,5 +220,29 @@ export const createVnPayPayment = async (token, orderId) => {
     }
 };
 
+export const submitReviewApi = async (token, reviewData) => {
+    try {
+        const response = await axios.post(
+            `${API_BASE_URL}/reviews`,
+            reviewData,
+            {
+                headers: getAuthHeaders(token),   // gửi Authorization: Bearer <token>
+                timeout: 5000,
+            }
+        );
+
+        // Tùy backend trả ResponseDTO hay không
+        return response.data?.data || response.data;
+    } catch (error) {
+        const errorMessage =
+            error.response?.data?.message ||
+            error.response?.data ||
+            error.message ||
+            'Lỗi khi gửi đánh giá';
+
+        console.error('Lỗi khi gửi đánh giá:', errorMessage);
+        throw new Error(errorMessage);
+    }
+};
 
 

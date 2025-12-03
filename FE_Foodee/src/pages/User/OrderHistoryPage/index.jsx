@@ -4,13 +4,67 @@ import { FaTimes, FaBoxOpen, FaShippingFast, FaCheckCircle, FaClock, FaTimesCirc
 import Swal from 'sweetalert2';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { getOrders, cancelOrder } from '../../../services/api/orderService';
+import { getOrders, cancelOrder, submitReviewApi  } from '../../../services/api/orderService';
 
 const OrderHistoryPage = () => {
     const [orders, setOrders] = useState([]);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [selectedOrderItem, setSelectedOrderItem] = useState(null);
+    const [rating, setRating] = useState(5);
+    const [comment, setComment] = useState("");
+    const [toast, setToast] = useState(null);
+
+
+    const openReviewModal = (order, item) => {
+        setSelectedOrder(order);
+        setSelectedOrderItem(item); 
+
+        // Set rating mặc định
+        setRating(5);
+        setComment("");
+
+        setShowReviewModal(true);
+    };
+
+    const submitReview = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                // ... xử lý hết hạn token
+                return;
+            }
+
+            await submitReviewApi(token, {
+                orderId: selectedOrder.id,
+                productId: selectedOrderItem.productId,
+                rating,
+                comment,
+            });
+
+            setShowReviewModal(false);
+
+            // 🔔 hiện toast
+            setToast({
+                type: 'success',
+                message: 'Cảm ơn bạn đã đánh giá!',
+            });
+        } catch (error) {
+            console.error('Review error:', error);
+            setToast({
+                type: 'error',
+                message: error.message || 'Lỗi khi gửi đánh giá',
+            });
+        }
+    };
+
+
+
+
+
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -105,6 +159,13 @@ const OrderHistoryPage = () => {
         fetchOrders();
     }, []);
 
+    useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 3000);
+        return () => clearTimeout(t);
+    }, [toast]);
+
+
     const statusStyles = {
         PENDING: 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border border-amber-200',
         CONFIRMED: 'bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 border border-blue-200',
@@ -145,6 +206,15 @@ const OrderHistoryPage = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-25 to-indigo-50 py-6 px-4 sm:px-6 lg:px-8">
             <ToastContainer />
+             {/* ⭐ Toast thông báo */}
+            {toast && (
+                <div
+                    className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-white flex items-center gap-2
+                        ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}
+                >
+                    <span className="font-semibold">{toast.message}</span>
+                </div>
+            )}
 
             {/* Header Section */}
             <div className="max-w-6xl mx-auto mb-8">
@@ -272,6 +342,15 @@ const OrderHistoryPage = () => {
                                                                 <p className="text-slate-500 text-xs">
                                                                     Tổng: {(item.subtotal || item.unitPrice * item.quantity || 0).toLocaleString('vi-VN')} ₫
                                                                 </p>
+                                                                {order.orderStatus === 'DELIVERED' && (
+                                                                    <button
+                                                                        onClick={() => openReviewModal(order, item)}
+                                                                        className="mt-2 px-3 py-1 bg-yellow-500 text-white rounded-lg text-xs"
+                                                                    >
+                                                                        Đánh giá món này
+                                                                    </button>
+                                                                )}
+
                                                             </div>
                                                         </div>
                                                     ))}
@@ -298,9 +377,13 @@ const OrderHistoryPage = () => {
                                                 Hủy Đơn Hàng
                                             </button>
                                         )}
+
+
+                                        
                                         {order.orderStatus === 'CANCEL_REQUESTED' && (
                                             <p className="text-gray-600 text-xs font-medium">Đang chờ admin phê duyệt yêu cầu hủy</p>
                                         )}
+
                                     </div>
                                 </div>
                             </div>
@@ -316,6 +399,55 @@ const OrderHistoryPage = () => {
                     </div>
                 )}
             </div>
+
+            {showReviewModal && selectedOrder && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-lg">
+                        <h3 className="text-xl font-bold mb-4 text-slate-800">Đánh giá món ăn</h3>
+
+                        <p className="font-semibold mb-2 text-sm">{selectedOrderItem?.productName}</p>
+
+                        {/* Chọn số sao */}
+                        <div className="flex gap-2 mb-4">
+                            {[1,2,3,4,5].map(star => (
+                                <span
+                                    key={star}
+                                    onClick={() => setRating(star)}
+                                    className={`cursor-pointer text-2xl ${
+                                        star <= rating ? 'text-yellow-400' : 'text-gray-300'
+                                    }`}
+                                >
+                                    ★
+                                </span>
+                            ))}
+                        </div>
+
+                        <textarea
+                            placeholder="Nhận xét (không bắt buộc)"
+                            className="w-full border rounded-lg p-3 mb-4"
+                            rows={3}
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                        />
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowReviewModal(false)}
+                                className="px-4 py-2 bg-gray-200 rounded-lg"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={submitReview}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                            >
+                                Gửi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
