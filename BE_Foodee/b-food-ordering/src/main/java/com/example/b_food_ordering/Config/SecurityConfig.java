@@ -4,10 +4,11 @@ import com.example.b_food_ordering.Entity.Role;
 import com.example.b_food_ordering.Repository.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;            // ✅
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider; // ✅
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -57,7 +58,7 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(jwtUtil, userDetailsService());
     }
 
-    // ✅ Buộc Spring dùng đúng provider với encoder của bạn
+    // Buộc Spring dùng đúng provider với encoder của bạn
     @Bean
     public DaoAuthenticationProvider daoAuthenticationProvider() {
         DaoAuthenticationProvider p = new DaoAuthenticationProvider();
@@ -66,7 +67,7 @@ public class SecurityConfig {
         return p;
     }
 
-    // ✅ AuthenticationManager dùng đúng provider trên
+    // AuthenticationManager dùng đúng provider trên
     @Bean
     public AuthenticationManager authenticationManager() {
         return new ProviderManager(daoAuthenticationProvider());
@@ -78,13 +79,15 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // ✅ đăng ký provider vào HttpSecurity
                 .authenticationProvider(daoAuthenticationProvider())
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ mở toàn bộ auth API (login, register, forgot, reset...)
+                        // Cho phép toàn bộ preflight CORS
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Mở toàn bộ auth API (login, register, forgot, reset...)
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // ✅ các API public khác
+                        // Các API public khác
                         .requestMatchers("/api/products", "/api/products/search").permitAll()
                         .requestMatchers("/api/product-types/**").permitAll()
                         .requestMatchers("/api/categories/**").permitAll()
@@ -92,7 +95,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/news", "/api/news/search").permitAll()
                         .requestMatchers("/api/payments/vnpay/**").permitAll()
 
-                        // ✅ phần cần quyền như cũ
+                        // Phần cần quyền như cũ
                         .requestMatchers("/api/products/**").hasRole("ADMIN")
                         .requestMatchers("/api/user/profile").permitAll()
                         .requestMatchers("/api/admin/profile").hasRole("ADMIN")
@@ -117,7 +120,6 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
-
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -136,15 +138,20 @@ public class SecurityConfig {
     }
 
 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+
+        // Cho phép mọi port trên localhost (5173, 5174, 3000...)
+        configuration.addAllowedOriginPattern("http://localhost:*");
+        configuration.addAllowedHeader("*");
+        configuration.addAllowedMethod("*");
+        configuration.addExposedHeader("*");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
 }
