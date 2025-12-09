@@ -21,7 +21,9 @@ function News() {
                     img: news.imageUrl || '/images/News/placeholder.jpg',
                     summary: news.description ? news.description.substring(0, 100) + '...' : '',
                     date: new Date(news.timestamp).toLocaleDateString('vi-VN'),
+                    url: news.url || '',      // nhận URL bài viết từ backend
                 }));
+
                 setNewsList(enrichedNews);
                 setError(null);
             } catch (err) {
@@ -202,9 +204,16 @@ function News() {
                                         {news.summary}
                                     </p>
 
-                                    <Link
-                                        to={`/news/${news.id}`}
+                                    <a
+                                        href={news.url || '#'}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-full font-semibold transition-all duration-300 hover:from-orange-600 hover:to-amber-700 hover:shadow-lg group-hover:shadow-xl transform hover:scale-105 group/button"
+                                        onClick={(e) => {
+                                            if (!news.url) {
+                                                e.preventDefault();
+                                            }
+                                        }}
                                     >
                                         <motion.div
                                             className="flex items-center"
@@ -215,7 +224,8 @@ function News() {
                                             Xem chi tiết
                                             <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover/button:translate-x-1" />
                                         </motion.div>
-                                    </Link>
+                                    </a>
+
                                 </div>
                             </motion.div>
                         ))}

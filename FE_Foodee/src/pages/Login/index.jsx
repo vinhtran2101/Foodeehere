@@ -69,7 +69,14 @@ function Login() {
             if (!token) {
                 throw new Error('Không nhận được token');
             }
-            localStorage.setItem('token', token);
+            if (formData.rememberMe) {
+                // Ghi nhớ đăng nhập -> lưu lâu
+                localStorage.setItem('token', token);
+            } else {
+                // Không ghi nhớ -> tự mất khi đóng tab
+                sessionStorage.setItem('token', token);
+            }
+
 
             const decodedToken = decodeJwt(token);
             const roles = decodedToken?.roles || [];

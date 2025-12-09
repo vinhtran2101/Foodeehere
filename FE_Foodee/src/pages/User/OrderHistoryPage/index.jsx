@@ -32,7 +32,9 @@ const OrderHistoryPage = () => {
 
     const submitReview = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token =
+            localStorage.getItem('token') || sessionStorage.getItem('token');
+
             if (!token) {
                 // ... xử lý hết hạn token
                 return;
@@ -70,7 +72,9 @@ const OrderHistoryPage = () => {
         setLoading(true);
         setError('');
         try {
-            const token = localStorage.getItem('token');
+            const token =
+            localStorage.getItem('token') || sessionStorage.getItem('token');
+
             if (!token) {
                 throw new Error('Vui lòng đăng nhập lại');
             }
@@ -122,7 +126,9 @@ const OrderHistoryPage = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const token = localStorage.getItem('token');
+                    const token =
+                    localStorage.getItem('token') || sessionStorage.getItem('token');
+
                     if (!token) throw new Error('Vui lòng đăng nhập lại');
 
                     const updatedOrder = await cancelOrder(token, id);

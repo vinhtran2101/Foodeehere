@@ -16,7 +16,9 @@ function UserManager() {
     const [currentPage, setCurrentPage] = useState(1);
     const usersPerPage = 7; // 7 records per page
 
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
 
     // Lấy danh sách người dùng
     useEffect(() => {

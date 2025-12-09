@@ -13,7 +13,9 @@ function ProductTypeManager() {
     const [showModal, setShowModal] = useState(false);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
 
     // Lấy danh sách loại sản phẩm từ backend
     useEffect(() => {

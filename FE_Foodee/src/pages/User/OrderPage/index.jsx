@@ -34,7 +34,9 @@ const OrderPage = () => {
         const fetchUserInfo = async () => {
             setUserLoading(true);
             try {
-                const token = localStorage.getItem('token');
+                const token =
+                localStorage.getItem('token') || sessionStorage.getItem('token');
+
                 if (!token) {
                     setError('Đăng nhập để đặt đồ ăn');
                     return;
@@ -181,7 +183,9 @@ const OrderPage = () => {
             setError('');
 
             try {
-                const token = localStorage.getItem('token');
+                const token =
+                localStorage.getItem('token') || sessionStorage.getItem('token');
+
                 if (!token) throw new Error('Không tìm thấy token');
 
                 let createdOrder = null;

@@ -30,7 +30,7 @@ function Header() {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
     const navigate = useNavigate();
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     const menuRef = useRef(null);
 
     // Close menu when clicking outside

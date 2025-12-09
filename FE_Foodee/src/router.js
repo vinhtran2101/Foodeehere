@@ -44,7 +44,7 @@ const decodeJwt = (token) => {
 
 // Kiểm tra xem người dùng có được xác thực và có vai trò ADMIN hay không
 const isAuthenticated = () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token) return false;
 
     const decodedToken = decodeJwt(token);

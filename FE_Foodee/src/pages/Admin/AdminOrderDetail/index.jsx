@@ -11,7 +11,9 @@ function AdminOrderDetail() {
     const { state } = useLocation();
     const navigate = useNavigate();
     const { order } = state || {};
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
     const [currentOrder, setCurrentOrder] = useState(order);
 
     if (!order) {

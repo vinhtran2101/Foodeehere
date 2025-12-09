@@ -43,7 +43,9 @@ function Booking() {
       return;
     }
 
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
     if (!token) {
       setError('Vui lòng đăng nhập để đặt bàn.');
       setLoading(false);

@@ -65,7 +65,9 @@ function AdminDashboard() {
     const [orderStatusSummary, setOrderStatusSummary] = useState([]);
     const [orderStatusLoading, setOrderStatusLoading] = useState(false);
 
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
     
     const orderStatusConfig = {
         PENDING: { 
@@ -136,12 +138,12 @@ function AdminDashboard() {
 
         switch (sort) {
             case 'LEAST_SOLD':
-                // Bán ít nhất → ít đơn nhất lên đầu
+                // Bán ít nhất , ít đơn nhất lên đầu
                 sorted.sort((a, b) => a.orders - b.orders);
                 break;
 
             case 'HIGHEST_RATING':
-                // Đánh giá cao nhất → điểm cao hơn lên đầu, nếu bằng nhau thì nhiều lượt đánh giá hơn lên trước
+                // Đánh giá cao nhất , điểm cao hơn lên đầu, nếu bằng nhau thì nhiều lượt đánh giá hơn lên trước
                 sorted.sort((a, b) => {
                     const ra = parseFloat(a.rating) || 0;
                     const rb = parseFloat(b.rating) || 0;
@@ -151,7 +153,7 @@ function AdminDashboard() {
                 break;
 
             case 'LOWEST_RATING':
-                // Đánh giá thấp nhất → điểm thấp hơn lên đầu, ưu tiên món đã có lượt đánh giá
+                // Đánh giá thấp nhất , điểm thấp hơn lên đầu, ưu tiên món đã có lượt đánh giá
                 sorted.sort((a, b) => {
                     const ra = parseFloat(a.rating) || 0;
                     const rb = parseFloat(b.rating) || 0;
@@ -214,12 +216,12 @@ function AdminDashboard() {
     const fetchProductTypes = async () => {
     setProductTypeLoading(true);
     try {
-        // 🔥 gọi API thống kê mới
+        // gọi API thống kê mới
         const productTypes = await getProductTypeStats(token);
 
         const formattedProductTypes = productTypes.map((productType, index) => ({
             name: productType.name,
-            value: productType.totalProducts,          // ✅ dùng số lượng thật
+            value: productType.totalProducts,          // dùng số lượng thật
             color: COLORS[index % COLORS.length]
         }));
 
@@ -258,7 +260,7 @@ function AdminDashboard() {
         }
     };
 
-    // ⬇️ MỚI: Load thống kê tổng quan dashboard
+    // Load thống kê tổng quan dashboard
     const fetchDashboardStats = async () => {
         setDashboardLoading(true);
         try {
@@ -318,7 +320,9 @@ function AdminDashboard() {
     const fetchTopFoods = async () => {
         try {
             setTopFoodsLoading(true);
-            const token = localStorage.getItem('token');
+            const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
 
             // Lấy khoảng 5 món cho hiển thị Top 5
             const data = await getDashboardTopFoods(token, 5);
@@ -366,7 +370,7 @@ function AdminDashboard() {
     fetchProfile();
     fetchProductTypes();
     fetchActivities();
-    fetchDashboardStats(); // 👈 quan trọng
+    fetchDashboardStats();
     fetchTopFoods(); 
     fetchOrderStatusSummaryData();
     const interval = setInterval(fetchOrderStatusSummaryData, 900000);
@@ -685,7 +689,7 @@ function AdminDashboard() {
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-xl font-bold text-gray-800">Thống kê tình trạng các món ăn</h3>
 
-                                    {/* ⭐ Bộ lọc sắp xếp */}
+                                    {/* Bộ lọc sắp xếp */}
                                     <div className="flex items-center gap-2 text-sm text-gray-500">
                                         <span className="hidden sm:inline">Sắp xếp:</span>
                                         <select

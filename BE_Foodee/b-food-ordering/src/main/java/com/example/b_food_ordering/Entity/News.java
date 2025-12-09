@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Data
 @Table(name = "news")
 public class News {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,43 +24,56 @@ public class News {
 
     private String imageUrl;
 
-	public Long getId() {
-		return id;
-	}
+    @Column(length = 500)
+    private String url;   // ✅ THÊM TRƯỜNG URL
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+    // ------- Getter & Setter chuẩn ---------
 
-	public String getTitle() {
-		return title;
-	}
+    public Long getId() {
+        return id;
+    }
 
-	public void setTitle(String title) {
-		this.title = title;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-	public LocalDateTime getTimestamp() {
-		return timestamp;
-	}
+    public String getTitle() {
+        return title;
+    }
 
-	public void setTimestamp(LocalDateTime timestamp) {
-		this.timestamp = timestamp;
-	}
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-	public String getDescription() {
-		return description;
-	}
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
 
-	public String getImageUrl() {
-		return imageUrl;
-	}
+    public String getDescription() {
+        return description;
+    }
 
-	public void setImageUrl(String imageUrl) {
-		this.imageUrl = imageUrl;
-	}
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
 }

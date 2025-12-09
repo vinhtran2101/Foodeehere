@@ -239,7 +239,9 @@ function BookingHistory() {
     // Fetch booking history on component mount
     useEffect(() => {
         const fetchBookings = async () => {
-            const token = localStorage.getItem('token');
+            const token =
+            localStorage.getItem('token') || sessionStorage.getItem('token');
+
             if (!token) {
                 setError('Vui lòng đăng nhập để xem lịch sử đặt bàn.');
                 setLoading(false);
@@ -275,7 +277,9 @@ function BookingHistory() {
             },
         }).then(async (result) => {
             if (result.isConfirmed) {
-                const token = localStorage.getItem('token');
+                const token =
+                localStorage.getItem('token') || sessionStorage.getItem('token');
+
                 try {
                     const updatedBooking = await cancelBooking(token, id);
                     setBookings(bookings.map((booking) => (booking.id === id ? updatedBooking : booking)));
@@ -305,7 +309,9 @@ function BookingHistory() {
 
     // Handle view booking details
     const handleViewDetails = async (id) => {
-        const token = localStorage.getItem('token');
+        const token =
+        localStorage.getItem('token') || sessionStorage.getItem('token');
+
         try {
             const bookingDetails = await getBookingDetails(token, id);
             setSelectedBooking(bookingDetails);

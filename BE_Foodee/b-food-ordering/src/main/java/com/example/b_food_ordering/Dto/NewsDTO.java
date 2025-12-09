@@ -11,53 +11,66 @@ public class NewsDTO {
     private String description;
     private String imageUrl;
 
+    private String url;   // ✅ THÊM TRƯỜNG URL ĐÚNG
+
     public NewsDTO() {}
 
-    public NewsDTO(Long id, String title, LocalDateTime timestamp, String description, String imageUrl) {
+    public NewsDTO(Long id, String title, LocalDateTime timestamp, String description, String imageUrl, String url) {
         this.id = id;
         this.title = title;
         this.timestamp = timestamp;
         this.description = description;
         this.imageUrl = imageUrl;
+        this.url = url;
     }
 
-	public Long getId() {
-		return id;
-	}
+    public Long getId() {
+        return id;
+    }
 
-	public void setId(Long id) {
-		this.id = id;
-	}
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-	public String getTitle() {
-		return title;
-	}
+    public String getTitle() {
+        return title;
+    }
 
-	public void setTitle(String title) {
-		this.title = title;
-	}
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
-	public LocalDateTime getTimestamp() {
-		return timestamp;
-	}
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
 
-	public void setTimestamp(LocalDateTime timestamp) {
-		this.timestamp = timestamp;
-	}
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
 
-	public String getDescription() {
-		return description;
-	}
+    public String getDescription() {
+        return description;
+    }
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-	public String getImageUrl() {
-		return imageUrl;
-	}
+    public String getImageUrl() {
+        return imageUrl;
+    }
 
-	public void setImageUrl(String imageUrl) {
-		this.imageUrl = imageUrl;
-	}
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    // ✅ Getter URL đúng
+    public String getUrl() {
+        return url;
+    }
+
+    // ✅ Setter URL đúng
+    public void setUrl(String url) {
+        this.url = url;
+    }
 }

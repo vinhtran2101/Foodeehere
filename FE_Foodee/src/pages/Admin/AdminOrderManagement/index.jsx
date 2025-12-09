@@ -31,7 +31,9 @@ function AdminOrderManagement() {
     const [error, setError] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const ordersPerPage = 7; // 7 records per page
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
     const navigate = useNavigate();
 
     // 🔍 state cho ô tìm kiếm

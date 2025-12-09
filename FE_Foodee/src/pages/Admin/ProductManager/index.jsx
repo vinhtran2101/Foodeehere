@@ -32,7 +32,9 @@ function ProductManager() {
     const [currentPage, setCurrentPage] = useState(1);
     const productsPerPage = 7; // 7 records per page
 
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
     const baseImagePath = 'http://localhost:5173/images/Product/';
 
     // Lấy danh sách sản phẩm, loại sản phẩm và danh mục từ backend

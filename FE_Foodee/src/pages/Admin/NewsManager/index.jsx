@@ -15,13 +15,17 @@ function NewsManager() {
         title: '',
         description: '',
         imageUrl: '',
+        url: '',              // thêm trường url
     });
+
     const [showImageModal, setShowImageModal] = useState(false);
     const [imageToShow, setImageToShow] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
     const baseImagePath = 'http://localhost:5173/images/News/';
 
     // Lấy danh sách tin tức từ backend
@@ -35,6 +39,7 @@ function NewsManager() {
                     description: news.description || '',
                     imageUrl: news.imageUrl || '/images/News/placeholder.jpg',
                     timestamp: news.timestamp,
+                    url: news.url || '',                    // map url
                 }));
                 setNewsList(enrichedNews);
                 setError(null);
@@ -64,15 +69,20 @@ function NewsManager() {
             setForm({
                 title: news.title,
                 description: news.description || '',
-                imageUrl: news.imageUrl && news.imageUrl.startsWith(baseImagePath) ? news.imageUrl.replace(baseImagePath, '') : news.imageUrl,
+                imageUrl: news.imageUrl && news.imageUrl.startsWith(baseImagePath)
+                    ? news.imageUrl.replace(baseImagePath, '')
+                    : news.imageUrl,
+                url: news.url || '',                      // lấy url từ bản ghi
             });
         } else {
             setForm({
                 title: '',
                 description: '',
                 imageUrl: '',
+                url: '',                                  //reset url
             });
         }
+
         setShowModal(true);
     };
 
@@ -107,6 +117,7 @@ function NewsManager() {
     // Thêm hoặc chỉnh sửa tin tức
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (!form.title || form.title.trim() === '') {
             setError('Tiêu đề tin tức không được để trống.');
             toast.error('Tiêu đề tin tức không được để trống.', {
@@ -120,7 +131,13 @@ function NewsManager() {
             });
             return;
         }
-        const imageUrl = form.imageUrl ? (form.imageUrl.startsWith('http') ? form.imageUrl : `${baseImagePath}${form.imageUrl}`) : null;
+
+        const imageUrl = form.imageUrl
+            ? (form.imageUrl.startsWith('http')
+                ? form.imageUrl
+                : `${baseImagePath}${form.imageUrl}`)
+            : null;
+
         if (imageUrl && imageUrl.startsWith('http') && !isValidUrl(imageUrl)) {
             setError('URL hình ảnh không hợp lệ.');
             toast.error('URL hình ảnh không hợp lệ.', {
@@ -134,6 +151,7 @@ function NewsManager() {
             });
             return;
         }
+
         if (imageUrl && !imageUrl.startsWith('http') && !form.imageUrl.match(/\.(jpg|jpeg|png|gif)$/i)) {
             setError('Tên tệp hình ảnh phải có đuôi .jpg, .jpeg, .png hoặc .gif.');
             toast.error('Tên tệp hình ảnh phải có đuôi .jpg, .jpeg, .png hoặc .gif.', {
@@ -148,22 +166,50 @@ function NewsManager() {
             return;
         }
 
+        // 1. Chuẩn hóa URL bài viết
+        const articleUrl =
+            form.url && form.url.trim() !== '' ? form.url.trim() : null;
+
+        // 2. Validate URL bài viết (nếu có)
+        if (articleUrl && !isValidUrl(articleUrl)) {
+            setError('Đường dẫn bài viết (URL) không hợp lệ.');
+            toast.error('Đường dẫn bài viết (URL) không hợp lệ.', {
+                position: 'top-right',
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                theme: 'light',
+            });
+            return;
+        }
+
         try {
+            // 3. Tạo payload sau khi đã có articleUrl
             const payload = {
                 title: form.title,
                 description: form.description || null,
                 imageUrl: imageUrl,
+                url: articleUrl,              //gửi URL bài viết cho backend
             };
 
             if (modalType === 'add') {
                 const newNews = await createNews(token, payload);
-                setNewsList([...newsList, {
-                    id: newNews.id,
-                    title: newNews.title,
-                    description: newNews.description || '',
-                    imageUrl: newNews.imageUrl || '/images/News/placeholder.jpg',
-                    timestamp: newNews.timestamp,
-                }]);
+                if (newNews && newNews.news) {
+                    setNewsList([
+                        ...newsList,
+                        {
+                            id: newNews.news.id,
+                            title: newNews.news.title,
+                            description: newNews.news.description || '',
+                            imageUrl: newNews.news.imageUrl || '/images/News/placeholder.jpg',
+                            timestamp: newNews.news.timestamp,
+                            url: newNews.news.url || '',          // lưu url
+                        },
+                    ]);
+                }
+
                 toast.success('Thêm tin tức thành công!', {
                     position: 'top-right',
                     autoClose: 3000,
@@ -175,15 +221,23 @@ function NewsManager() {
                 });
             } else if (modalType === 'edit' && selectedNews) {
                 const updatedNews = await updateNews(token, selectedNews.id, payload);
-                setNewsList(newsList.map(n =>
-                    n.id === selectedNews.id ? {
-                        ...n,
-                        title: updatedNews.title,
-                        description: updatedNews.description || '',
-                        imageUrl: updatedNews.imageUrl || '/images/News/placeholder.jpg',
-                        timestamp: updatedNews.timestamp,
-                    } : n
-                ));
+                if (updatedNews && updatedNews.news) {
+                    setNewsList(
+                        newsList.map((news) =>
+                            news.id === selectedNews.id
+                                ? {
+                                      ...news,
+                                      title: updatedNews.news.title,
+                                      description: updatedNews.news.description || '',
+                                      imageUrl: updatedNews.news.imageUrl || '/images/News/placeholder.jpg',
+                                      timestamp: updatedNews.news.timestamp,
+                                      url: updatedNews.news.url || '',       
+                                  }
+                                : news,
+                        ),
+                    );
+                }
+
                 toast.success('Cập nhật tin tức thành công!', {
                     position: 'top-right',
                     autoClose: 3000,
@@ -194,6 +248,7 @@ function NewsManager() {
                     theme: 'light',
                 });
             }
+
             handleCloseModal();
         } catch (err) {
             setError(err.message || 'Lỗi khi lưu tin tức.');
@@ -240,7 +295,7 @@ function NewsManager() {
 
         try {
             await deleteNews(token, id);
-            setNewsList(newsList.filter(n => n.id !== id));
+            setNewsList(newsList.filter((n) => n.id !== id));
             toast.success('Xóa tin tức thành công!', {
                 position: 'top-right',
                 autoClose: 3000,
@@ -265,63 +320,62 @@ function NewsManager() {
         }
     };
 
-    // Tìm kiếm tin tức theo tiêu đề 
-const handleSearch = async () => {
-    try {
-        const newsData = await searchNews(token, search);
-        const enrichedNews = newsData.map(news => ({
-            id: news.id,
-            title: news.title,
-            description: news.description || '',
-            imageUrl: news.imageUrl || '/images/News/placeholder.jpg',
-            timestamp: news.timestamp,
-        }));
-        setNewsList(enrichedNews);
-        setError(null);
+    // Tìm kiếm tin tức theo tiêu đề
+    const handleSearch = async () => {
+        try {
+            const newsData = await searchNews(token, search);
+            const enrichedNews = newsData.map((news) => ({
+                id: news.id,
+                title: news.title,
+                description: news.description || '',
+                imageUrl: news.imageUrl || '/images/News/placeholder.jpg',
+                timestamp: news.timestamp,
+                url: news.url || '',                 // map url
+            }));
+            setNewsList(enrichedNews);
+            setError(null);
+        } catch (err) {
+            setError(err.message || 'Lỗi khi tìm kiếm tin tức.');
+            toast.error(err.message || 'Lỗi khi tìm kiếm tin tức.', {
+                position: 'top-right',
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                theme: 'light',
+            });
+        }
+    };
 
-    } catch (err) {
-        setError(err.message || 'Lỗi khi tìm kiếm tin tức.');
-        toast.error(err.message || 'Lỗi khi tìm kiếm tin tức.', {
-            position: 'top-right',
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            theme: 'light',
-        });
-    }
-};
-
-// Xóa bộ lọc tìm kiếm và tải lại danh sách tin tức 
-const handleClearFilter = async () => {
-    setSearch('');
-    try {
-        const newsData = await searchNews(token, '');
-        const enrichedNews = newsData.map(news => ({
-            id: news.id,
-            title: news.title,
-            description: news.description || '',
-            imageUrl: news.imageUrl || '/images/News/placeholder.jpg',
-            timestamp: news.timestamp,
-        }));
-        setNewsList(enrichedNews);
-        setError(null);
-
-    } catch (err) {
-        setError(err.message || 'Lỗi khi tải lại danh sách tin tức.');
-        toast.error(err.message || 'Lỗi khi tải lại danh sách tin tức.', {
-            position: 'top-right',
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            theme: 'light',
-        });
-    }
-};
-
+    // Xóa bộ lọc tìm kiếm và tải lại danh sách tin tức
+    const handleClearFilter = async () => {
+        setSearch('');
+        try {
+            const newsData = await searchNews(token, '');
+            const enrichedNews = newsData.map((news) => ({
+                id: news.id,
+                title: news.title,
+                description: news.description || '',
+                imageUrl: news.imageUrl || '/images/News/placeholder.jpg',
+                timestamp: news.timestamp,
+                url: news.url || '',                 // ✅ map url
+            }));
+            setNewsList(enrichedNews);
+            setError(null);
+        } catch (err) {
+            setError(err.message || 'Lỗi khi tải lại danh sách tin tức.');
+            toast.error(err.message || 'Lỗi khi tải lại danh sách tin tức.', {
+                position: 'top-right',
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                theme: 'light',
+            });
+        }
+    };
 
     // Kiểm tra URL hợp lệ
     const isValidUrl = (url) => {
@@ -334,7 +388,7 @@ const handleClearFilter = async () => {
     };
 
     if (loading) return <div className="flex items-center justify-center min-h-screen text-gray-600">Đang tải...</div>;
-    if (error) return <div className="flex items-center justify-center min-h-screen text-red-500">{error}</div>;
+    if (error && !showModal) return <div className="flex items-center justify-center min-h-screen text-red-500">{error}</div>;
 
     return (
         <div className="container mx-auto p-6 bg-gradient-to-br from-gray-100 to-gray-200 min-h-screen">
@@ -396,12 +450,16 @@ const handleClearFilter = async () => {
                                             src={news.imageUrl}
                                             alt={news.title}
                                             className="w-12 h-12 object-cover rounded cursor-pointer"
-                                            onError={(e) => { e.target.src = '/images/News/placeholder.jpg'; }}
+                                            onError={(e) => {
+                                                e.target.src = '/images/News/placeholder.jpg';
+                                            }}
                                             onClick={() => handleShowImage(news.imageUrl)}
                                         />
                                     </td>
                                     <td className="p-4 border-t border-gray-200">{news.title}</td>
-                                    <td className="p-4 border-t border-gray-200">{news.description?.substring(0, 50) || ''}...</td>
+                                    <td className="p-4 border-t border-gray-200">
+                                        {news.description?.substring(0, 50) || ''}...
+                                    </td>
                                     <td className="p-4 border-t border-gray-200">
                                         {new Date(news.timestamp).toLocaleString('vi-VN')}
                                     </td>
@@ -436,7 +494,9 @@ const handleClearFilter = async () => {
                             src={imageToShow}
                             alt="News"
                             className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-                            onError={(e) => { e.target.src = '/images/News/placeholder.jpg'; }}
+                            onError={(e) => {
+                                e.target.src = '/images/News/placeholder.jpg';
+                            }}
                         />
                         <button
                             className="absolute top-4 right-4 text-white text-2xl font-bold bg-gray-800 rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-700 transition-all duration-200"
@@ -452,14 +512,20 @@ const handleClearFilter = async () => {
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl p-8 w-full max-w-4xl shadow-2xl backdrop-blur-lg">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-6">{modalType === 'add' ? 'Thêm tin tức' : 'Chỉnh sửa tin tức'}</h3>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                            {modalType === 'add' ? 'Thêm tin tức' : 'Chỉnh sửa tin tức'}
+                        </h3>
+
                         {error && <div className="text-red-500 mb-4">{error}</div>}
+
                         <form onSubmit={handleSubmit}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 {/* Cột trái */}
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block font-medium text-sm text-gray-700">Tiêu đề tin tức *</label>
+                                        <label className="block font-medium text-sm text-gray-700">
+                                            Tiêu đề tin tức *
+                                        </label>
                                         <input
                                             type="text"
                                             name="title"
@@ -470,8 +536,11 @@ const handleClearFilter = async () => {
                                             placeholder="Nhập tiêu đề tin tức"
                                         />
                                     </div>
+
                                     <div>
-                                        <label className="block font-medium text-sm text-gray-700">Hình ảnh</label>
+                                        <label className="block font-medium text-sm text-gray-700">
+                                            Hình ảnh
+                                        </label>
                                         <input
                                             type="text"
                                             name="imageUrl"
@@ -482,18 +551,27 @@ const handleClearFilter = async () => {
                                         />
                                         {form.imageUrl && (
                                             <img
-                                                src={form.imageUrl.startsWith('http') ? form.imageUrl : `${baseImagePath}${form.imageUrl}`}
+                                                src={
+                                                    form.imageUrl.startsWith('http')
+                                                        ? form.imageUrl
+                                                        : `${baseImagePath}${form.imageUrl}`
+                                                }
                                                 alt="Preview"
                                                 className="w-20 h-20 object-cover mt-2 rounded"
-                                                onError={(e) => { e.target.src = '/images/News/placeholder.jpg'; }}
+                                                onError={(e) => {
+                                                    e.target.src = '/images/News/placeholder.jpg';
+                                                }}
                                             />
                                         )}
                                     </div>
                                 </div>
+
                                 {/* Cột phải */}
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block font-medium text-sm text-gray-700">Mô tả</label>
+                                        <label className="block font-medium text-sm text-gray-700">
+                                            Mô tả
+                                        </label>
                                         <textarea
                                             name="description"
                                             className="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -503,8 +581,27 @@ const handleClearFilter = async () => {
                                             rows="6"
                                         />
                                     </div>
+
+                                    {/* Đường dẫn bài viết */}
+                                    <div>
+                                        <label className="block font-medium text-sm text-gray-700">
+                                            Đường dẫn bài viết (URL)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="url"
+                                            className="w-full border border-gray-300 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            value={form.url}
+                                            onChange={handleChange}
+                                            placeholder="Nhập URL bài viết (Facebook, website...)"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Ví dụ: https://www.facebook.com/share/p/1AsSSrNzxo/
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
+
                             <div className="flex justify-end mt-6 space-x-3">
                                 <button
                                     type="button"

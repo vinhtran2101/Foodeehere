@@ -11,7 +11,7 @@ import { createOrderFromProduct } from '../../services/api/orderService';
 const CartContext = createContext();
 
 // Lấy token mỗi lần cần dùng
-const getToken = () => localStorage.getItem('token');
+const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
 
 /**
  * Chuẩn hóa dữ liệu trả về từ API giỏ hàng

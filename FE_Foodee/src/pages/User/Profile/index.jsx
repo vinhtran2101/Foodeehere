@@ -77,7 +77,9 @@ function Profile() {
     const [updateLoading, setUpdateLoading] = useState(false);
     const [toast, setToast] = useState(null);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
 
     useEffect(() => {
         if (!token) {

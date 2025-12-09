@@ -35,7 +35,9 @@ function AdminBookingManagement() {
     // 🔍 state cho ô tìm kiếm
     const [search, setSearch] = useState('');
 
-    const token = localStorage.getItem('token');
+    const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token');
+
 
     useEffect(() => {
         const fetchBookings = async () => {

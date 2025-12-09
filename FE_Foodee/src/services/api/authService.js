@@ -12,7 +12,7 @@ export const register = async (registerData) => {
     } catch (error) {
         throw error.response?.data || 'Đăng ký thất bại. Vui lòng thử lại sau.';
     }
-};
+};  
 
 export const login = async (loginData) => {
     try {
