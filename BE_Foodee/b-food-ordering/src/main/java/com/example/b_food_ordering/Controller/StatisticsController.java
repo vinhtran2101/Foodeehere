@@ -77,7 +77,7 @@ public class StatisticsController {
     //---------------------------
 
     /**
-     * 📌 API: Thống kê tổng quan dashboard
+     * API: Thống kê tổng quan dashboard
      * Trả về:
      * - Tổng món ăn
      * - Tổng người dùng
@@ -92,7 +92,7 @@ public class StatisticsController {
 
 
     /**
-     * 📌 API: Doanh thu theo tháng (cho biểu đồ)
+     * API: Doanh thu theo tháng (cho biểu đồ)
      * FE gọi: /dashboard/revenue?year=2025
      */
     @GetMapping("/dashboard/revenue")
@@ -103,7 +103,7 @@ public class StatisticsController {
 
 
     /**
-     * 📌 API: Top món ăn cho Dashboard
+     * API: Top món ăn cho Dashboard
      */
     @GetMapping("/dashboard/top-foods")
     public ResponseEntity<List<Map<String, Object>>> getDashboardTopFoods(
@@ -113,7 +113,7 @@ public class StatisticsController {
 
 
     /**
-     * 📌 API: Top người dùng nổi bật (advanced)
+     * API: Top người dùng nổi bật (advanced)
      */
     @GetMapping("/dashboard/top-users-advanced")
     public ResponseEntity<List<Map<String, Object>>> getDashboardTopUsers(
@@ -122,7 +122,7 @@ public class StatisticsController {
     }
 
     /**
-     * 📌 API: Thống kê số đơn theo trạng thái trong khoảng ngày [from, to].
+     *  API: Thống kê số đơn theo trạng thái trong khoảng ngày [from, to].
      * - Nếu không truyền from/to -> mặc định hôm nay.
      * - from, to định dạng: yyyy-MM-dd (VD: 2025-12-02)
      */

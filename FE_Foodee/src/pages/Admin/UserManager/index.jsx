@@ -168,7 +168,7 @@ function UserManager() {
         return true;
     };
 
-    // Thêm người dùng
+    // Thêm người dùng (tài khoản ADMIN)
     const handleCreate = async () => {
         if (!validateAddForm()) {
             toast.error(error, {
@@ -190,12 +190,14 @@ function UserManager() {
                 email: addForm.email,
                 password: addForm.password,
                 enabled: addForm.enabled,
-                roles: ['USER'],
+                // Gửi lên roles ADMIN (backend thực ra cũng đang ép lại)
+                roles: ['ADMIN'],
                 fullname: addForm.fullname,
                 address: addForm.address || undefined,
                 phoneNumber: addForm.phoneNumber || undefined,
             });
 
+            // Ghi lại vào state với role ADMIN để UI hiển thị đúng
             const newUser = {
                 id: response.username,
                 username: response.username,
@@ -205,11 +207,12 @@ function UserManager() {
                 phoneNumber: response.phoneNumber || '',
                 status: addForm.enabled ? 'active' : 'inactive',
                 enabled: addForm.enabled,
-                roles: ['USER'],
+                roles: ['ADMIN'],
             };
+
             setUsers([...users, newUser]);
             setAddingUser(false);
-            toast.success(`Thêm nhân viên/admin ${response.username} thành công!`, {
+            toast.success(`Thêm tài khoản ADMIN ${response.username} thành công!`, {
                 position: 'top-right',
                 autoClose: 3000,
                 hideProgressBar: false,
@@ -219,7 +222,7 @@ function UserManager() {
                 theme: 'light',
             });
             setError(null);
-            setCurrentPage(1); // Reset to first page after adding user
+            setCurrentPage(1);
         } catch (err) {
             setError(err.message || 'Không thể tạo người dùng.');
             toast.error(err.message || 'Không thể tạo người dùng.', {
@@ -235,6 +238,7 @@ function UserManager() {
             setCreateLoading(false);
         }
     };
+
 
     // Pagination logic
     const indexOfLastUser = currentPage * usersPerPage;

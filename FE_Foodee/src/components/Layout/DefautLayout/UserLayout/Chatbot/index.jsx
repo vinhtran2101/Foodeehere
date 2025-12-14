@@ -65,9 +65,17 @@ function Chatbot({ isOpen, onClose, openProductModal }) {
             const response = await axios.post('http://localhost:8080/api/chatbot', { message: messageToSend });
             const botReply = response.data.reply || 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại!';
             const products = response.data.products || [];
+
             setMessages((prev) => [...prev, { role: 'bot', content: botReply }]);
-            const recommendedProducts = extractRecommendedProducts(botReply, products);
-            setSuggestedProducts(recommendedProducts.length > 0 ? recommendedProducts : products.slice(0, 3));
+
+            //  Truyền cả câu hỏi của user vào để xử lý logic "bán chạy nhất"
+            const recommendedProducts = extractRecommendedProducts(messageToSend, botReply, products);
+
+            setSuggestedProducts(
+                recommendedProducts.length > 0
+                    ? recommendedProducts
+                    : products.slice(0, 3)
+            );
         } catch (error) {
             console.error('Error calling chatbot API:', error);
             setMessages((prev) => [
@@ -81,13 +89,40 @@ function Chatbot({ isOpen, onClose, openProductModal }) {
         }
     };
 
-    const extractRecommendedProducts = (botReply, products) => {
-        const lowerReply = botReply.toLowerCase();
-        const recommended = products.filter(product =>
-            lowerReply.includes(product.name.toLowerCase())
+
+    // Lọc sản phẩm gợi ý dựa trên câu trả lời của bot + câu hỏi của người dùng
+    const extractRecommendedProducts = (userQuestion, botReply, products) => {
+        if (!products || products.length === 0) return [];
+
+        const reply = (botReply || '').toLowerCase();
+        const question = (userQuestion || '').toLowerCase();
+
+        // Các product xuất hiện tên trong câu trả lời
+        const matched = products.filter(
+            (p) => p.name && reply.includes(p.name.toLowerCase())
         );
-        return recommended.length > 0 ? recommended.slice(0, 3) : products.slice(0, 3);
+
+        //  Nếu câu hỏi là "món nào bán chạy nhất" → chỉ trả về đúng 1 món
+        const isBestSellerQuestion =
+            question.includes('bán chạy nhất') ||
+            question.includes('bán chạy nhất?');
+
+        if (isBestSellerQuestion) {
+            if (matched.length > 0) {
+                // Chỉ lấy món đầu tiên bot nhắc tới
+                return [matched[0]];
+            }
+            // Nếu bot không nhắc cụ thể tên món nào thì lấy món đầu tiên trong list
+            return [products[0]];
+        }
+
+        // ❖ Các câu hỏi bình thường: gợi ý tối đa 3 món
+        if (matched.length > 0) {
+            return matched.slice(0, 3);
+        }
+        return products.slice(0, 3);
     };
+
 
     const handleKeyPress = (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {

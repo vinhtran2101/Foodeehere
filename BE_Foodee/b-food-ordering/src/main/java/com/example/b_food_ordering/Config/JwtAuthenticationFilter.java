@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Component
-    public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
@@ -31,11 +31,30 @@ import java.util.List;
         this.userDetailsService = userDetailsService;
     }
 
-    // ✅ BỎ QUA filter cho /api/auth/** (login/register không bị chặn)
+    /**
+     * BỎ QUA JWT FILTER cho các API public (chưa đăng nhập vẫn gọi được)
+     * Lưu ý: CHỈ ĐƯỢC TỒN TẠI 1 shouldNotFilter trong class này.
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
         String path = request.getServletPath();
-        return path != null && path.startsWith("/api/auth/");
+        if (path == null) return false;
+
+        // Auth APIs: login/register/forgot/reset...
+        if (path.startsWith("/api/auth/")) return true;
+
+        // Public APIs khác (đúng theo SecurityConfig của bạn)
+        if (path.equals("/api/chatbot")) return true;
+
+        if (path.equals("/api/products") || path.equals("/api/products/search")) return true;
+        if (path.startsWith("/api/product-types")) return true;
+        if (path.startsWith("/api/categories")) return true;
+
+        if (path.equals("/api/news") || path.equals("/api/news/search")) return true;
+
+        if (path.startsWith("/api/payments/vnpay")) return true;
+
+        return false;
     }
 
     @Override
@@ -44,12 +63,7 @@ import java.util.List;
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        String path = request.getServletPath();
-
-        // ✅ Public endpoints khác cũng cho qua
-
-
-        // ✅ Không có header Authorization -> cho qua (KHÔNG trả 401 ở đây)
+        // Không có header Authorization -> cho qua (KHÔNG trả 401 ở đây)
         String authHeader = request.getHeader("Authorization");
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
@@ -86,13 +100,12 @@ import java.util.List;
                         authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toString()));
                     }
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { }
 
-            // Dùng quyền từ DB (ổn định nhất)
+            // Dùng quyền từ DB (chuẩn)
             UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            // Nếu muốn dùng quyền từ token thì thay bằng "authorities"
+            // Nếu muốn dùng quyền từ token thì thay userDetails.getAuthorities() bằng authorities
 
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authToken);

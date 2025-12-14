@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell
 import { Calendar, ChevronDown, X, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, updateAdminProfile } from '../../../services/api/userService';
-import { getAllProductTypes, getRecentActivities, getDashboardOverview, getTopFoods, getOrderStatusSummary,  getDashboardTopFoods } from '../../../services/api/statisticsService';
+import { getAllProductTypes, getRecentActivities, getDashboardOverview, getTopFoods, getOrderStatusSummary,  getDashboardTopFoods, getRevenueByMonth, getRevenueDailyFlexible } from '../../../services/api/statisticsService';
 import { getProductTypeStats } from '../../../services/api/statisticsService';
 
 // Toast Notification Component
@@ -64,6 +64,16 @@ function AdminDashboard() {
     const [topFoodSort, setTopFoodSort] = useState('MOST_SOLD'); // kiểu sắp xếp hiện tại
     const [orderStatusSummary, setOrderStatusSummary] = useState([]);
     const [orderStatusLoading, setOrderStatusLoading] = useState(false);
+
+    // Revenue chart state: granularity (monthly/daily), selected year/month and series data
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    const defaultMonthlyData = Array.from({ length: 12 }, (_, i) => ({ name: `T${i + 1}`, revenue: 0 }));
+    const [revenueSeries, setRevenueSeries] = useState(defaultMonthlyData);
+    const [revenueLoading, setRevenueLoading] = useState(false);
+    const [revenueGranularity, setRevenueGranularity] = useState('monthly'); // 'monthly' or 'daily'
+    const [selectedYear, setSelectedYear] = useState(currentYear);
+    const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
     const token =
     localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -380,30 +390,7 @@ function AdminDashboard() {
 
 }, [navigate, token]);
 
-
-    // Dữ liệu demo còn lại giữ nguyên
-    // const stats = [
-    //     { label: 'Tổng số món ăn', value: 85, icon: <FaUtensils />, color: 'from-blue-500 to-blue-600', bgColor: 'bg-blue-50', textColor: 'text-blue-600' },
-    //     { label: 'Người dùng', value: 620, icon: <FaUsers />, color: 'from-green-500 to-green-600', bgColor: 'bg-green-50', textColor: 'text-green-600' },
-    //     { label: 'Đơn hàng', value: 450, icon: <FaClipboardList />, color: 'from-yellow-500 to-yellow-600', bgColor: 'bg-yellow-50', textColor: 'text-yellow-600' },
-    //     { label: 'Đánh giá', value: 4.7, icon: <FaStar />, color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50', textColor: 'text-purple-600' },
-    //     { label: 'Doanh thu (triệu)', value: 780, icon: <FaChartBar />, color: 'from-red-500 to-red-600', bgColor: 'bg-red-50', textColor: 'text-red-600' },
-    // ];   
-
-    const revenueData = [
-        { name: 'T1', revenue: 100, target: 120 },
-        { name: 'T2', revenue: 130, target: 140 },
-        { name: 'T3', revenue: 160, target: 150 },
-        { name: 'T4', revenue: 190, target: 180 },
-        { name: 'T5', revenue: 150, target: 160 },
-        { name: 'T6', revenue: 210, target: 200 },
-        { name: 'T7', revenue: 180, target: 190 },
-        { name: 'T8', revenue: 220, target: 210 },
-        { name: 'T9', revenue: 240, target: 230 },
-        { name: 'T10', revenue: 200, target: 220 },
-        { name: 'T11', revenue: 260, target: 250 },
-        { name: 'T12', revenue: 280, target: 270 }
-    ];
+    // legacy demo data removed — use `revenueSeries` state populated from API
 
 
 
@@ -531,17 +518,69 @@ function AdminDashboard() {
         if (!topFoodsRaw || topFoodsRaw.length === 0) return;
         setTopFoods(applyTopFoodSort(topFoodsRaw, topFoodSort));
     }, [topFoodsRaw, topFoodSort]);
+    // Fetch revenue series when granularity / year / month changes
+    useEffect(() => {
+        const fetchRevenueSeries = async () => {
+            if (!token) return;
+            setRevenueLoading(true);
+            try {
+                if (revenueGranularity === 'monthly') {
+                    const data = await getRevenueByMonth(token, selectedYear);
+                    const months = Array.from({ length: 12 }, (_, i) => ({ name: `T${i + 1}`, revenue: 0 }));
+                    if (Array.isArray(data)) {
+                        data.forEach((item) => {
+                            const m = Number(item.month) || Number(item.monthIndex) || Number(item.monthNumber) || 0;
+                            const val = Number(item.revenue ?? item.totalRevenue ?? item.value ?? 0);
+                            if (m >= 1 && m <= 12) months[m - 1].revenue = val;
+                        });
+                    } else if (data && typeof data === 'object') {
+                        for (let i = 1; i <= 12; i++) {
+                            months[i - 1].revenue = Number(data[i] ?? data[`T${i}`] ?? data[`M${i}`] ?? 0);
+                        }
+                    }
+                    setRevenueSeries(months);
+                } else {
+                    let data;
+                    try {
+                        data = await getRevenueDailyFlexible(token, selectedYear, selectedMonth);
+                    } catch (err) {
+                        console.error('Daily revenue fetch failed (all attempts):', err);
+                        setRevenueSeries([]);
+                        setToast({ message: 'Không lấy được dữ liệu theo ngày. Vui lòng kiểm tra backend.', type: 'error' });
+                        setRevenueLoading(false);
+                        return;
+                    }
+
+                    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+                    const days = Array.from({ length: daysInMonth }, (_, i) => ({ name: `${i + 1}`, revenue: 0 }));
+                    if (Array.isArray(data)) {
+                        data.forEach((item) => {
+                            const d = Number(item.day) || Number(item.date) || Number(item.dayOfMonth) || 0;
+                            const val = Number(item.revenue ?? item.totalRevenue ?? item.value ?? 0);
+                            if (d >= 1 && d <= daysInMonth) days[d - 1].revenue = val;
+                        });
+                    } else if (data && typeof data === 'object') {
+                        for (let d = 1; d <= daysInMonth; d++) days[d - 1].revenue = Number(data[d] ?? 0);
+                    }
+                    setRevenueSeries(days);
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải dữ liệu doanh thu:', error);
+                setToast({ message: 'Lỗi khi tải dữ liệu doanh thu.', type: 'error' });
+            } finally {
+                setRevenueLoading(false);
+            }
+        };
+
+        fetchRevenueSeries();
+    }, [token, revenueGranularity, selectedYear, selectedMonth]);
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white p-3 shadow-lg rounded-lg border">
-                    <p className="text-gray-800 font-medium">{`Tháng ${label}`}</p>
-                    {payload.map((entry, index) => (
-                        <p key={index} className="text-sm" style={{ color: entry.color }}>
-                            {entry.name === 'revenue' ? 'Doanh thu' : 'Mục tiêu'}: {entry.value} triệu
-                        </p>
-                    ))}
+                    <p className="text-gray-800 font-medium">{revenueGranularity === 'daily' ? `Ngày ${label}` : `Tháng ${label}`}</p>
+                    <p className="text-sm text-gray-700">Doanh thu: {payload[0].value?.toLocaleString?.('vi-VN') ?? payload[0].value} VND</p>
                 </div>
             );
         }
@@ -624,61 +663,98 @@ function AdminDashboard() {
                         {/* Biểu đồ doanh thu */}
                         <div className="bg-white rounded-2xl shadow-lg p-6 border border-white/20">
                             <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-gray-800">Doanh thu theo tháng</h3>
-                                <span className="bg-gradient-to-r from-blue-500 to-purple-600 text-white text-xs font-medium px-3 py-1 rounded-full">
-                                    Năm 2025
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-xl font-bold text-gray-800">
+                                        {revenueGranularity === 'daily'
+                                            ? `Doanh thu Thg ${selectedMonth} - ${selectedYear}`
+                                            : `Doanh thu Năm ${selectedYear}`}
+                                    </h3>
+
+                                    <div className="ml-4 flex items-center gap-2">
+                                        <select
+                                            value={revenueGranularity}
+                                            onChange={(e) => setRevenueGranularity(e.target.value)}
+                                            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="monthly">Theo tháng (năm)</option>
+                                            <option value="daily">Theo ngày (tháng)</option>
+                                        </select>
+
+                                        {/* Year selector only when monthly view */}
+                                        {revenueGranularity === 'monthly' ? (
+                                            <select
+                                                value={selectedYear}
+                                                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                                                className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                {[currentYear - 2, currentYear - 1, currentYear].map((y) => (
+                                                    <option key={y} value={y}>{y}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            // show year as label when viewing daily
+                                            <span className="text-sm text-gray-600 px-2">{selectedYear}</span>
+                                        )}
+
+                                        {/* Month selector only when daily view */}
+                                        <select
+                                            value={selectedMonth}
+                                            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                                            disabled={revenueGranularity === 'monthly'}
+                                            className="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                        >
+                                            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                                                <option key={m} value={m}>{`Thg ${m}`}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                             <div className="h-80">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={revenueData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                                        <defs>
-                                            <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
-                                            </linearGradient>
-                                            <linearGradient id="targetGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1} />
-                                            </linearGradient>
-                                        </defs>
-                                        <XAxis
-                                            dataKey="name"
-                                            axisLine={false}
-                                            tickLine={false}
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                        />
-                                        <YAxis
-                                            axisLine={false}
-                                            tickLine={false}
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="target"
-                                            stroke="#8b5cf6"
-                                            strokeWidth={2}
-                                            fill="url(#targetGradient)"
-                                        />
-                                        <Area
-                                            type="monotone"
-                                            dataKey="revenue"
-                                            stroke="#3b82f6"
-                                            strokeWidth={2}
-                                            fill="url(#revenueGradient)"
-                                        />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                                {revenueLoading ? (
+                                    <div className="flex items-center justify-center h-full">
+                                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                                    </div>
+                                ) : revenueSeries.length === 0 ? (
+                                    <div className="flex items-center justify-center h-full text-gray-500">
+                                        Không có dữ liệu cho lựa chọn này.
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={revenueSeries} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                                            <defs>
+                                                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                                                </linearGradient>
+                                            </defs>
+                                            <XAxis
+                                                dataKey="name"
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fontSize: 12, fill: '#6b7280' }}
+                                            />
+                                            <YAxis
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fontSize: 12, fill: '#6b7280' }}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Area
+                                                type="monotone"
+                                                dataKey="revenue"
+                                                stroke="#3b82f6"
+                                                strokeWidth={2}
+                                                fill="url(#revenueGradient)"
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                )}
                             </div>
                             <div className="flex items-center justify-center gap-6 mt-4">
                                 <div className="flex items-center gap-2">
                                     <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                                     <span className="text-sm text-gray-600">Doanh thu thực tế</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                                    <span className="text-sm text-gray-600">Mục tiêu</span>
                                 </div>
                             </div>
                         </div>

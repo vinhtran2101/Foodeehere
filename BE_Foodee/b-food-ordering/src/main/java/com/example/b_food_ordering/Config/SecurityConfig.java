@@ -84,7 +84,15 @@ public class SecurityConfig {
                         // Cho phép toàn bộ preflight CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Mở toàn bộ auth API (login, register, forgot, reset...)
+                        // Auth PUBLIC: khai báo rõ các endpoint hay dùng (quên mk / reset mk)
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password"
+                        ).permitAll()
+
+                        // Mở toàn bộ auth API còn lại (nếu có)
                         .requestMatchers("/api/auth/**").permitAll()
 
                         // Các API public khác
@@ -120,6 +128,7 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
+
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -153,5 +162,4 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
 }

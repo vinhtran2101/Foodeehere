@@ -11,7 +11,7 @@ public class NewsDTO {
     private String description;
     private String imageUrl;
 
-    private String url;   // ✅ THÊM TRƯỜNG URL ĐÚNG
+    private String url;   //  THÊM TRƯỜNG URL ĐÚNG
 
     public NewsDTO() {}
 
@@ -64,12 +64,12 @@ public class NewsDTO {
         this.imageUrl = imageUrl;
     }
 
-    // ✅ Getter URL đúng
+    //  Getter URL đúng
     public String getUrl() {
         return url;
     }
 
-    // ✅ Setter URL đúng
+    //  Setter URL đúng
     public void setUrl(String url) {
         this.url = url;
     }

@@ -105,6 +105,41 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    @Transactional
+    public User createAdmin(UserDTO dto) {
+        // Kiểm tra username trùng
+        if (userRepository.existsByUsername(dto.getUsername())) {
+            throw new RuntimeException("Username đã tồn tại!");
+        }
+
+        // Kiểm tra email trùng
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("Email đã tồn tại!");
+        }
+
+        // Tạo user mới
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setEmail(dto.getEmail());
+        user.setFullname(dto.getFullname());
+        user.setAddress(dto.getAddress());
+        user.setPhoneNumber(dto.getPhoneNumber());
+        user.setEnabled(true);
+
+        // Gán role ADMIN
+        Role adminRole = roleRepository.findByName("ADMIN");
+        if (adminRole == null) {
+            throw new RuntimeException("Role ADMIN không tồn tại trong CSDL!");
+        }
+
+        // Set role
+        user.setRoles(Set.of(adminRole));
+
+        return userRepository.save(user);
+    }
+
+
     // 8. Admin cập nhật user bất kỳ
     @Transactional
     public User updateUser(String username, UserDTO dto) {

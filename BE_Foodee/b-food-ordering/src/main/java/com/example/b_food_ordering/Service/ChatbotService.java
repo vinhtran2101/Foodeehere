@@ -24,8 +24,8 @@ public class ChatbotService {
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#,##0");
 
     private final ProductService productService;
-    private final ProductTypeService productTypeService; 
-    private final CategoryService categoryService;       
+    private final ProductTypeService productTypeService;
+    private final CategoryService categoryService;
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
 
@@ -33,8 +33,11 @@ public class ChatbotService {
     private String groqApiKey;
 
     @Autowired
-    public ChatbotService(ProductService productService, ProductTypeService productTypeService,
-                         CategoryService categoryService, OkHttpClient httpClient, ObjectMapper objectMapper) {
+    public ChatbotService(ProductService productService,
+                          ProductTypeService productTypeService,
+                          CategoryService categoryService,
+                          OkHttpClient httpClient,
+                          ObjectMapper objectMapper) {
         this.productService = productService;
         this.productTypeService = productTypeService;
         this.categoryService = categoryService;
@@ -44,150 +47,190 @@ public class ChatbotService {
 
     public Map<String, Object> processChatQuery(String userQuery) {
         Map<String, Object> response = new HashMap<>();
-        
+
         if (userQuery == null || userQuery.trim().isEmpty()) {
-            logger.warn("Câu hỏi người dùng rỗng hoặc null");
-            response.put("message", "Câu hỏi không được để trống");
+            response.put("message", "Câu hỏi không được để trống.");
             response.put("reply", "");
-            response.put("products", new ArrayList<>()); // Thêm trường products
+            response.put("products", new ArrayList<>());
             return response;
         }
 
         try {
-            logger.info("Xử lý câu hỏi: {}", userQuery);
+            // 1. RAG - truy xuất món từ DB
             List<ProductDTO> products = fetchRelevantProducts(userQuery);
+
+            // 2. Tóm tắt món ăn thành text cho AI đọc
             String productSummary = generateProductSummary(products);
+
+            // 3. Build PROMPT rõ ràng cho Groq
             String prompt = String.format(
-                    "Bạn là một chatbot tư vấn món ăn. Dựa trên câu hỏi của người dùng và danh sách sản phẩm dưới đây, hãy đưa ra gợi ý món ăn hoặc loại món ăn phù hợp. Trả lời bằng tiếng Việt, ngắn gọn, thân thiện và tự nhiên, như một nhân viên nhà hàng nhiệt tình. Nếu gợi ý sản phẩm cụ thể, chỉ bao gồm tên sản phẩm trong phản hồi, không bao gồm ID. Nếu không tìm thấy món phù hợp, trả lời lịch sự.\n\n" +
-                            "Câu hỏi người dùng: %s\n\n" +
-                            "Danh sách sản phẩm:\n%s\n\n" +
-                            "Trả lời:", userQuery, productSummary);
-            
+                    """
+                    Bạn là chatbot tư vấn món ăn cho hệ thống Foodee.
+
+                    NGUYÊN TẮC QUAN TRỌNG:
+                    - Chỉ được sử dụng thông tin TRONG DANH SÁCH SẢN PHẨM bên dưới.
+                    - Nếu danh sách sản phẩm trống hoặc không phù hợp với câu hỏi,
+                      hãy trả lời: "Hiện tại Foodee chưa có món phù hợp với yêu cầu này. 
+                      Bạn có thể thử yêu cầu khác hoặc xem thêm trong menu."
+                    - Không được tự bịa thêm món không có trong danh sách.
+                    - Nếu có nhiều món phù hợp, hãy gợi ý 1–3 món tiêu biểu, kèm lý do ngắn gọn.
+
+                    THÔNG TIN ĐẦU VÀO:
+                    - Câu hỏi người dùng: %s
+
+                    - Danh sách sản phẩm (mã, tên, loại, danh mục, giá, trạng thái giảm giá):
+                    %s
+
+                    Hãy trả lời thân thiện, súc tích bằng tiếng Việt.
+                    """,
+                    userQuery,
+                    productSummary.isBlank() ? "(Không có sản phẩm nào được tìm thấy)" : productSummary
+            );
+
+            // 4. Gọi Groq sinh câu trả lời
             String botReply = callGroqApi(prompt);
-            
-            response.put("message", products.isEmpty() ? "Không tìm thấy sản phẩm phù hợp" : "Tư vấn thành công");
+
+            response.put("message", products.isEmpty()
+                    ? "Không tìm thấy sản phẩm phù hợp."
+                    : "Tư vấn thành công.");
             response.put("reply", botReply);
-            response.put("products", products); // Thêm danh sách sản phẩm vào phản hồi
-            logger.info("Phản hồi chatbot: {}", botReply);
+            response.put("products", products);
         } catch (Exception e) {
-            logger.error("Lỗi khi xử lý câu hỏi: {}", e.getMessage(), e);
-            response.put("message", "Lỗi khi xử lý câu hỏi: " + e.getMessage());
+            logger.error("Lỗi khi xử lý câu hỏi chatbot", e);
+            response.put("message", "Đã xảy ra lỗi khi xử lý câu hỏi: " + e.getMessage());
             response.put("reply", "");
             response.put("products", new ArrayList<>());
         }
-        
+
         return response;
     }
 
+    // RAG: Bước 1 - Truy xuất món ăn phù hợp từ database
     private List<ProductDTO> fetchRelevantProducts(String userQuery) {
-        // Lấy toàn bộ sản phẩm AVAILABLE 1 lần để giảm số lần query/phép lọc lặp
+        // 1. Lấy toàn bộ sản phẩm đang bán
         List<ProductDTO> allAvailable = productService.getAllProducts().stream()
                 .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
                 .collect(Collectors.toList());
 
-        // Nếu query rỗng -> random 5 món AVAILABLE
+        // Query rỗng -> random vài món gợi ý
         if (userQuery == null || userQuery.trim().isEmpty()) {
             Collections.shuffle(allAvailable);
             return allAvailable.stream().limit(5).collect(Collectors.toList());
         }
 
-        String lowerQuery = userQuery.toLowerCase(Locale.ROOT).trim();
-
-        // Phát hiện ý định tìm kiếm đơn giản
-        boolean isSearchIntent =
-                lowerQuery.contains("tìm") ||
-                lowerQuery.contains("món") ||
-                lowerQuery.contains("ăn gì") ||
-                lowerQuery.contains("nhà hàng") ||
-                lowerQuery.contains("gợi ý") ||
-                lowerQuery.contains("tư vấn") ||
-                lowerQuery.contains("có")|| 
-        		lowerQuery.contains("không");
-
-        // Chuẩn hoá từ khoá để tìm
-        String searchTerm = lowerQuery
-                .replaceAll("\\b(tìm|món|ăn|gì|nhà hàng|gợi ý|tư vấn|các|của|nào|nhất|có|không|1|vài|một|tôi|mình||về|đề xuất|)\\b", "") // bỏ stop-words cơ bản
+        // 2. Chuẩn hóa câu hỏi
+        String lower = userQuery.toLowerCase(Locale.ROOT).trim();
+        String normalized = lower
+                .replaceAll("[?!.]", " ")
                 .replaceAll("\\s+", " ")
-                .replaceAll("[?]", "")
                 .trim();
 
-        // Dùng map theo id để loại trùng (giữ món đầu tiên tìm thấy)
+        // 3. Xóa bớt stop-word tiếng Việt phổ biến
+        String cleaned = normalized.replaceAll(
+                "\\b(tìm|món|ăn|gì|gợi|gợi ý|giúp|tư vấn|về|đề xuất|" +
+                        "có|không|các|những|nào|cho|em|anh|chị|mình|tôi|ta|bạn|quán|nhà hàng)\\b",
+                ""
+        ).replaceAll("\\s+", " ").trim();
+
+        // 4. Cắt thành list keyword
+        List<String> keywords = Arrays.stream(cleaned.split("\\s+"))
+                .filter(w -> w != null && !w.isBlank() && w.length() > 1)
+                .collect(Collectors.toList());
+
+        // Nếu rỗng: lấy từ cuối câu làm keyword (thường là "cơm", "gà", "trà sữa"...)
+        if (keywords.isEmpty()) {
+            String[] tokens = normalized.split("\\s+");
+            if (tokens.length > 0) {
+                String last = tokens[tokens.length - 1];
+                if (last.length() > 1) {
+                    keywords = Collections.singletonList(last);
+                }
+            }
+        }
+
+        // Nếu vẫn rỗng -> random
+        if (keywords.isEmpty()) {
+            Collections.shuffle(allAvailable);
+            return allAvailable.stream().limit(5).collect(Collectors.toList());
+        }
+
+        logger.info("Chatbot keywords: {}", keywords);
+
+        // 5. Dùng map để loại trùng món
         Map<Long, ProductDTO> dedupById = new LinkedHashMap<>();
 
-        if (isSearchIntent) {
-            // 1) Tên sản phẩm
-            if (!searchTerm.isEmpty()) {
-                try {
-                    List<ProductDTO> byName = productService.searchProductsByName(searchTerm).stream()
-                            .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
-                            .collect(Collectors.toList());
-                    byName.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
-                    logger.info("Tìm thấy {} sản phẩm theo tên", byName.size());
-                } catch (IllegalArgumentException e) {
-                    logger.warn("Lỗi tìm theo tên '{}': {}", searchTerm, e.getMessage());
-                }
+        for (String kw : keywords) {
+            String kwTrim = kw.trim();
+            if (kwTrim.isEmpty()) continue;
+
+            // 5.1 Tìm theo TÊN món
+            try {
+                List<ProductDTO> byName = productService.searchProductsByName(kwTrim).stream()
+                        .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
+                        .collect(Collectors.toList());
+                byName.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
+                logger.info("Found %d products by NAME for '%s'".formatted(byName.size(), kwTrim));
+            } catch (IllegalArgumentException e) {
+                logger.warn("Error search by name '{}': {}", kwTrim, e.getMessage());
             }
 
-            // 2) Theo loại sản phẩm
+            // 5.2 Tìm theo LOẠI món (product type)
             try {
-                // Tìm loại có chứa từ khoá (nếu rỗng thì bỏ qua)
-                if (!searchTerm.isEmpty()) {
-                    productTypeService.getAllProductTypes().stream()
-                            .filter(pt -> pt.getName() != null &&
-                                    pt.getName().toLowerCase(Locale.ROOT).contains(searchTerm))
-                            .findFirst()
-                            .ifPresent(pt -> {
-                                List<ProductDTO> byType = productService.getProductsByProductTypeId(pt.getId()).stream()
-                                        .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
-                                        .collect(Collectors.toList());
-                                byType.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
-                                logger.info("Tìm thấy {} sản phẩm theo loại '{}'", byType.size(), pt.getName());
-                            });
-                }
+                productTypeService.getAllProductTypes().stream()
+                        .filter(pt -> pt.getName() != null &&
+                                pt.getName().toLowerCase(Locale.ROOT).contains(kwTrim))
+                        .findFirst()
+                        .ifPresent(pt -> {
+                            List<ProductDTO> byType = productService.getProductsByProductTypeId(pt.getId()).stream()
+                                    .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
+                                    .collect(Collectors.toList());
+                            byType.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
+                            logger.info("Found {} products by TYPE '{}' (kw '{}')",
+                                    byType.size(), pt.getName(), kwTrim);
+                        });
             } catch (Exception e) {
-                logger.warn("Lỗi tìm theo loại '{}': {}", searchTerm, e.getMessage());
+                logger.warn("Error search by type '{}': {}", kwTrim, e.getMessage());
             }
 
-            // 3) Theo danh mục
+            // 5.3 Tìm theo DANH MỤC món (category)
             try {
-                if (!searchTerm.isEmpty()) {
-                    categoryService.getAllCategories().stream()
-                            .filter(c -> c.getName() != null &&
-                                    c.getName().toLowerCase(Locale.ROOT).contains(searchTerm))
-                            .findFirst()
-                            .ifPresent(cat -> {
-                                List<ProductDTO> byCat = productService.getProductsByCategoryId(cat.getId()).stream()
-                                        .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
-                                        .collect(Collectors.toList());
-                                byCat.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
-                                logger.info("Tìm thấy {} sản phẩm theo danh mục '{}'", byCat.size(), cat.getName());
-                            });
-                }
+                categoryService.getAllCategories().stream()
+                        .filter(c -> c.getName() != null &&
+                                c.getName().toLowerCase(Locale.ROOT).contains(kwTrim))
+                        .findFirst()
+                        .ifPresent(cat -> {
+                            List<ProductDTO> byCat = productService.getProductsByCategoryId(cat.getId()).stream()
+                                    .filter(p -> "AVAILABLE".equalsIgnoreCase(p.getStatus()))
+                                    .collect(Collectors.toList());
+                            byCat.forEach(p -> dedupById.putIfAbsent(p.getId(), p));
+                            logger.info("Found {} products by CATEGORY '{}' (kw '{}')",
+                                    byCat.size(), cat.getName(), kwTrim);
+                        });
             } catch (Exception e) {
-                logger.warn("Lỗi tìm theo danh mục '{}': {}", searchTerm, e.getMessage());
+                logger.warn("Error search by category '{}': {}", kwTrim, e.getMessage());
             }
         }
 
         List<ProductDTO> collected = new ArrayList<>(dedupById.values());
 
-        // Nếu sau khi tìm vẫn rỗng -> fallback ngẫu nhiên từ allAvailable
+        // 6. Nếu không tìm được gì, fallback random
         if (collected.isEmpty()) {
-            logger.info("Không tìm thấy theo từ khoá '{}', trả về 5 sản phẩm ngẫu nhiên", lowerQuery);
+            logger.info("No product found for query '{}', fallback random", userQuery);
             Collections.shuffle(allAvailable);
             return allAvailable.stream().limit(5).collect(Collectors.toList());
         }
 
-        // Xáo trộn và giới hạn 5
+        // 7. Xáo trộn nhẹ và giới hạn 5 món
         Collections.shuffle(collected);
         return collected.stream().limit(5).collect(Collectors.toList());
     }
 
-
+    // Tóm tắt danh sách món cho Groq đọc – dùng đúng field của ProductDTO
     private String generateProductSummary(List<ProductDTO> products) {
-        if (products.isEmpty()) {
+        if (products == null || products.isEmpty()) {
             return "Không có sản phẩm nào đang có sẵn.";
         }
-        
+
         return products.stream()
                 .limit(5) // Giới hạn tối đa 5 sản phẩm
                 .map(p -> {
@@ -195,17 +238,45 @@ public class ChatbotService {
                     String productTypeName = p.getProductTypeName() != null ? p.getProductTypeName() : "Không xác định";
                     String categoryName = p.getCategoryName() != null ? p.getCategoryName() : "Không có";
                     String status = p.getStatus() != null ? p.getStatus() : "Không xác định";
-                    String originalPrice = DECIMAL_FORMAT.format(p.getOriginalPrice());
-                    String discountedPrice = p.getDiscountedPrice() >= 0 ? DECIMAL_FORMAT.format(p.getDiscountedPrice()) : "Không có";
-                    return String.format("Tên: %s, Loại: %s, Danh mục: %s, Giá: %s VND, Giá giảm: %s VND, Trạng thái: %s",
-                            name, productTypeName, categoryName, originalPrice, discountedPrice, status);
+
+                    double original = p.getOriginalPrice();
+                    double discounted = p.getDiscountedPrice();
+                    double discountPercent = p.getDiscount(); // %
+
+                    String originalPrice = DECIMAL_FORMAT.format(original);
+                    String discountedPrice;
+                    String discountInfo;
+
+                    // Có giảm giá khi discounted > 0 và < giá gốc
+                    if (discounted > 0 && discounted < original) {
+                        discountedPrice = DECIMAL_FORMAT.format(discounted) + " VND";
+                        if (discountPercent > 0) {
+                            discountInfo = DECIMAL_FORMAT.format(discountPercent) + " %";
+                        } else {
+                            discountInfo = "Không rõ %";
+                        }
+                    } else {
+                        discountedPrice = "Không áp dụng";
+                        discountInfo = "0 %";
+                    }
+
+                    return String.format(
+                            "Tên: %s, Loại: %s, Danh mục: %s, Giá gốc: %s VND, Giá sau giảm: %s, Giảm: %s, Trạng thái: %s",
+                            name,
+                            productTypeName,
+                            categoryName,
+                            originalPrice,
+                            discountedPrice,
+                            discountInfo,
+                            status
+                    );
                 })
                 .collect(Collectors.joining("\n"));
     }
 
     private String callGroqApi(String prompt) throws IOException {
         logger.info("Gửi yêu cầu tới Groq API với prompt: {}", prompt);
-        
+
         // Tạo JSON body
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", "llama-3.1-8b-instant");

@@ -19,7 +19,7 @@ public class ProductTypeController {
     private ProductTypeService productTypeService;
 
     @Autowired
-    private ProductService productService;  // ⭐ thêm đúng chỗ đúng style
+    private ProductService productService;
 
     // Tạo loại sản phẩm mới
     @PostMapping

@@ -79,7 +79,7 @@ public class AuthController {
     }
 
     // =========================
-    // 🔎 Endpoint chẩn đoán bcrypt
+    //  Endpoint chẩn đoán bcrypt
     // Ví dụ gọi:
     // GET http://localhost:8080/api/auth/_diag/matches?username=admin&raw=123456
     // =========================

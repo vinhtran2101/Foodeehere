@@ -114,11 +114,11 @@ public class UserController {
         return ResponseEntity.ok(toDTO(user));
     }
 
-    // 4. Admin tạo user mới
+    // 4. Admin tạo tài khoản ADMIN mới
     @PostMapping("/create")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDTO> createUser(@Valid @RequestBody UserDTO dto) {
-        User user = userService.createUser(dto);
+    public ResponseEntity<UserDTO> createAdmin(@Valid @RequestBody UserDTO dto) {
+        User user = userService.createAdmin(dto);   // dùng hàm createAdmin đã thêm trong UserService
         return ResponseEntity.ok(toDTO(user));
     }
 
